@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useVoiceCommand, useTtsPlayer } from "@voicecn/react";
+import { useVoiceCommand, useTtsPlayer } from "@usevoice/react";
 import { DemoWebSocket } from "./mockServerSocket";
 
-const wsUrl = import.meta.env.VITE_VOICECN_WS_URL;
-const forceMock = import.meta.env.VITE_VOICECN_USE_MOCK === "1";
+const wsUrl = import.meta.env.VITE_USEVOICE_WS_URL;
+const forceMock = import.meta.env.VITE_USEVOICE_USE_MOCK === "1";
 const useMockSocket = forceMock || !wsUrl;
 
 export default function App() {
@@ -96,7 +96,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "sans-serif", maxWidth: 520, margin: "0 auto" }}>
-      <h1>VoiceCN React Demo</h1>
+      <h1>useVoice React Demo</h1>
       <p>
         Mode: <strong>{useMockSocket ? "Mock socket" : "Cloudflare worker"}</strong>
       </p>

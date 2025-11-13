@@ -1,6 +1,6 @@
 // Wrangler config for the Cloudflare Worker example.
 {
-  "name": "voicecn-example-worker",
+  "name": "usevoice-example-worker",
   "main": "src/worker.ts",
   "compatibility_date": "2024-10-01",
   "durable_objects": {

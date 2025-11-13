@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 declare interface ImportMetaEnv {
-  readonly VITE_VOICECN_WS_URL?: string;
-  readonly VITE_VOICECN_USE_MOCK?: string;
+  readonly VITE_USEVOICE_WS_URL?: string;
+  readonly VITE_USEVOICE_USE_MOCK?: string;
 }
 
 declare interface ImportMeta {

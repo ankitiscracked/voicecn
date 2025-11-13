@@ -1,50 +1,49 @@
+import { DeepgramClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import type {
   TranscriptionProvider,
-  TranscriptionStream
-} from "@voicecn/server";
-import {
-  createClient as createDeepgramClient,
-  LiveTranscriptionEvents
-} from "@deepgram/sdk";
+  TranscriptionStream,
+} from "@usevoice/server";
 
 const DeepgramEvents = {
   Open: LiveTranscriptionEvents.Open,
   Transcript: LiveTranscriptionEvents.Transcript,
   Close: LiveTranscriptionEvents.Close,
-  Error: LiveTranscriptionEvents.Error
+  Error: LiveTranscriptionEvents.Error,
 } as const;
 
 export interface DeepgramProviderConfig {
-  apiKey: string;
-  model?: string;
+  apiKey?: string;
+  modelId: string;
   keepAliveIntervalMs?: number;
   defaultEncoding?: string;
   defaultSampleRate?: number;
   defaultChannels?: number;
-  clientFactory?: typeof createDeepgramClient;
 }
 
 export class DeepgramTranscriptionProvider implements TranscriptionProvider {
   private readonly apiKey: string;
-  private readonly model: string;
+  private readonly modelId: string;
   private readonly keepAliveIntervalMs: number;
   private readonly defaultEncoding: string;
   private readonly defaultSampleRate: number;
   private readonly defaultChannels: number;
-  private readonly createClient: typeof createDeepgramClient;
 
   constructor(config: DeepgramProviderConfig) {
-    if (!config?.apiKey) {
+    let apiKey = config.apiKey;
+    if (!apiKey) {
+      if (typeof process !== "undefined") {
+        apiKey = process.env.DEEPGRAM_API_KEY ?? "";
+      }
+    }
+    if (!apiKey) {
       throw new Error("DeepgramTranscriptionProvider requires an apiKey");
     }
-
-    this.apiKey = config.apiKey;
-    this.model = config.model ?? "nova-3";
+    this.apiKey = apiKey;
+    this.modelId = config.modelId;
     this.keepAliveIntervalMs = config.keepAliveIntervalMs ?? 3000;
     this.defaultEncoding = config.defaultEncoding ?? "opus";
     this.defaultSampleRate = config.defaultSampleRate ?? 48_000;
     this.defaultChannels = config.defaultChannels ?? 1;
-    this.createClient = config.clientFactory ?? createDeepgramClient;
   }
 
   async createStream({
@@ -54,9 +53,9 @@ export class DeepgramTranscriptionProvider implements TranscriptionProvider {
   }: Parameters<
     TranscriptionProvider["createStream"]
   >[0]): Promise<TranscriptionStream> {
-    const client = this.createClient(this.apiKey);
+    const client = new DeepgramClient({ key: this.apiKey });
     const stream = client.listen.live({
-      model: this.model,
+      model: this.modelId,
       punctuate: true,
       interim_results: true,
       utterance_end_ms: 1500,

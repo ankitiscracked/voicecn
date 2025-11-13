@@ -1,5 +1,5 @@
 {
-  "name": "@voicecn/example-worker",
+  "name": "@usevoice/example-worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
   "dependencies": {
     "@cartesia/cartesia-js": "^2.2.9",
     "@deepgram/sdk": "^4.11.2",
-    "@voicecn/cartesia": "workspace:*",
-    "@voicecn/core": "workspace:*",
-    "@voicecn/deepgram": "workspace:*",
-    "@voicecn/server": "workspace:*"
+    "@usevoice/cartesia": "workspace:*",
+    "@usevoice/core": "workspace:*",
+    "@usevoice/deepgram": "workspace:*",
+    "@usevoice/server": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241004.0",

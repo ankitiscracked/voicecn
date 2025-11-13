@@ -1,9 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { VoiceSessionManager } from "../session/voiceSessionManager";
+import {
+  createVoiceWebSocketSession,
+  DeclarativeVoiceSessionOptions,
+  VoiceSessionProviders,
+  type DeclarativeVoiceSession,
+} from "../session/declarativeVoiceSession";
 import type {
   AgentProcessor,
   TranscriptionProvider,
-  TtsStreamer
+  SpeechProvider,
 } from "../types";
 
 export interface CloudflareDurableObjectState {
@@ -22,22 +27,17 @@ export interface CloudflareEnv {}
 type CloudflareResponseInit = ResponseInit & { webSocket?: WebSocket };
 
 export interface CloudflareSessionFactory<Env extends CloudflareEnv> {
-  createProviders: (
-    env: Env,
-    userId: string
-  ) => {
-    transcriptionProvider: TranscriptionProvider;
-    agentProcessor: AgentProcessor;
-    ttsStreamer?: TtsStreamer;
-  };
+  transcription: (env: Env) => TranscriptionProvider;
+  agent: (env: Env) => AgentProcessor;
+  speech: (env: Env) => SpeechProvider;
 }
 
 export function createVoiceDurableObject<Env extends CloudflareEnv>(
-  factory: CloudflareSessionFactory<Env>
+  providers: CloudflareSessionFactory<Env>
 ) {
   return class VoiceDurableObject {
     // Internal session tracking for the currently connected user.
-    session: VoiceSessionManager | null = null;
+    session: DeclarativeVoiceSession | null = null;
 
     constructor(
       readonly state: CloudflareDurableObjectState,
@@ -46,7 +46,10 @@ export function createVoiceDurableObject<Env extends CloudflareEnv>(
       for (const socket of this.state.getWebSockets()) {
         const attachment = socket.deserializeAttachment();
         if (attachment?.userId) {
-          this.session = this.createSession(socket as CloudflareWebSocket, attachment.userId);
+          this.session = this.createSession(
+            socket as CloudflareWebSocket,
+            attachment.userId
+          );
         }
       }
     }
@@ -72,7 +75,10 @@ export function createVoiceDurableObject<Env extends CloudflareEnv>(
       }
 
       const pair = new WebSocketPair();
-      const [client, server] = Object.values(pair) as [CloudflareWebSocket, CloudflareWebSocket];
+      const [client, server] = Object.values(pair) as [
+        CloudflareWebSocket,
+        CloudflareWebSocket
+      ];
 
       this.session = this.createSession(server, user.id);
       server.serializeAttachment({ userId: user.id });
@@ -81,42 +87,54 @@ export function createVoiceDurableObject<Env extends CloudflareEnv>(
 
       const responseInit: CloudflareResponseInit = {
         status: 101,
-        webSocket: client
+        webSocket: client,
       };
 
       return new Response(null, responseInit);
     }
 
-    async webSocketMessage(ws: CloudflareWebSocket, message: string | ArrayBuffer) {
+    async webSocketMessage(
+      ws: CloudflareWebSocket,
+      message: string | ArrayBuffer
+    ) {
       this.ensureSession(ws);
       await this.session?.handleMessage(message);
     }
 
-    async webSocketClose(ws: CloudflareWebSocket, code: number, reason: string) {
+    async webSocketClose(
+      ws: CloudflareWebSocket,
+      code: number,
+      reason: string
+    ) {
       this.ensureSession(ws);
       this.session?.handleClose(code, reason);
+      this.session = null;
     }
 
     async webSocketError(ws: CloudflareWebSocket, error: unknown) {
       this.ensureSession(ws);
-      const message = error instanceof Error ? error.message : "WebSocket error";
+      const message =
+        error instanceof Error ? error.message : "WebSocket error";
       this.session?.handleClose(1011, message);
+      this.session = null;
     }
 
     createSession(ws: CloudflareWebSocket, userId: string) {
-      const { transcriptionProvider, agentProcessor, ttsStreamer } =
-        factory.createProviders(this.env, userId);
-
-      return new VoiceSessionManager({
+      const sessionProviders = {
+        transcription: providers.transcription(this.env),
+        agent: providers.agent(this.env),
+        speech: providers.speech(this.env),
+      };
+      return createVoiceWebSocketSession({
         userId,
-        transcriptionProvider,
-        agentProcessor,
-        ttsStreamer,
-        sendJson: (payload) => {
-          ws.send(JSON.stringify(payload));
+        providers: sessionProviders,
+        transport: {
+          sendJson: (payload) => {
+            ws.send(JSON.stringify(payload));
+          },
+          sendBinary: (chunk) => ws.send(chunk),
+          close: (code, reason) => ws.close(code, reason),
         },
-        sendBinary: (chunk) => ws.send(chunk),
-        closeSocket: (code, reason) => ws.close(code, reason)
       });
     }
 

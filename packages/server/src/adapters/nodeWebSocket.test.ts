@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { attachNodeWebSocketSession } from "./nodeWebSocket";
-import {
-  MockAgentProcessor,
-  MockTranscriptionProvider
-} from "../providers";
+import { MockAgentProcessor, MockTranscriptionProvider } from "../providers";
+import { MockSpeechProvider } from "../providers/speech/mockSpeechProvider";
 
 class FakeWebSocket {
   readyState = 1;
@@ -37,9 +35,10 @@ describe("attachNodeWebSocketSession", () => {
       ws: ws as any,
       userId: "user-1",
       transcriptionProvider: new MockTranscriptionProvider({
-        transcript: "hello"
+        transcript: "hello",
       }),
-      agentProcessor: new MockAgentProcessor()
+      agentProcessor: new MockAgentProcessor(),
+      speechProvider: new MockSpeechProvider(),
     });
 
     ws.emit("message", JSON.stringify({ type: "start" }));

@@ -2,17 +2,11 @@ import type { VoiceSocketEvent } from "@usevoice/core";
 import type {
   AgentProcessor,
   TranscriptionProvider,
-  TtsStreamer
+  SpeechProvider,
 } from "../types";
 import { VoiceSessionManager } from "./voiceSessionManager";
-import {
-  createAsyncQueue,
-  type AsyncQueue
-} from "../utils/asyncQueue";
-import {
-  createDeferred,
-  type Deferred
-} from "../utils/deferred";
+import { createAsyncQueue, type AsyncQueue } from "../utils/asyncQueue";
+import { createDeferred, type Deferred } from "../utils/deferred";
 import { EventEmitter } from "../utils/eventEmitter";
 
 export interface VoiceSessionTranscript {
@@ -49,11 +43,15 @@ export interface DeclarativeVoiceSessionTransport {
   close: (code?: number, reason?: string) => void;
 }
 
-export interface DeclarativeVoiceSessionOptions {
-  userId: string;
+export interface VoiceSessionProviders {
   transcription: TranscriptionProvider;
   agent: AgentProcessor;
-  tts?: TtsStreamer;
+  speech: SpeechProvider;
+}
+
+export interface DeclarativeVoiceSessionOptions {
+  userId: string;
+  providers: VoiceSessionProviders;
   idleTimeoutMs?: number;
   transport: DeclarativeVoiceSessionTransport;
 }
@@ -91,9 +89,9 @@ export function createVoiceWebSocketSession(
 
   const manager = new VoiceSessionManager({
     userId: options.userId,
-    transcriptionProvider: options.transcription,
-    agentProcessor: options.agent,
-    ttsStreamer: options.tts,
+    transcriptionProvider: options.providers.transcription,
+    agentProcessor: options.providers.agent,
+    speechProvider: options.providers.speech,
     idleTimeoutMs: options.idleTimeoutMs,
     sendJson: (payload) => {
       emitEvent(payload.type, payload);
@@ -109,7 +107,7 @@ export function createVoiceWebSocketSession(
     },
     closeSocket: (code, reason) => {
       options.transport.close(code, reason);
-    }
+    },
   });
 
   function emitEvent(event: string, payload: unknown) {
@@ -133,7 +131,7 @@ export function createVoiceWebSocketSession(
       agentComplete,
       ttsActive: false,
       awaitingTts: false,
-      closed: false
+      closed: false,
     };
 
     activeCommand = channel;
@@ -143,15 +141,15 @@ export function createVoiceWebSocketSession(
       startedAt: channel.startedAt,
       text: {
         stream: () => textQueue.iterator(),
-        final: transcript.promise
+        final: transcript.promise,
       },
       agent: {
         stream: () => agentQueue.iterator(),
-        final: agentComplete.promise
+        final: agentComplete.promise,
       },
       speech: {
-        stream: () => speechQueue.iterator()
-      }
+        stream: () => speechQueue.iterator(),
+      },
     };
 
     commandsQueue.push(command);
@@ -165,7 +163,7 @@ export function createVoiceWebSocketSession(
       activeCommand.transcript.resolve({
         transcript: text,
         startedAt: activeCommand.startedAt,
-        completedAt: Date.now()
+        completedAt: Date.now(),
       });
     }
   }
@@ -241,7 +239,7 @@ export function createVoiceWebSocketSession(
             activeCommand.agentComplete.resolve(event);
           }
           const expectsTts =
-            Boolean(options.tts) &&
+            Boolean(options.providers.speech) &&
             typeof event.data?.formattedContent?.content === "string" &&
             event.data.formattedContent.content.length > 0;
           activeCommand.awaitingTts = expectsTts;
@@ -272,9 +270,7 @@ export function createVoiceWebSocketSession(
         break;
       case "error":
         failCommand(
-          new Error(
-            event.data?.error ?? "voice session encountered an error"
-          )
+          new Error(event.data?.error ?? "voice session encountered an error")
         );
         break;
       default:
@@ -295,6 +291,6 @@ export function createVoiceWebSocketSession(
     on: (event, handler) => emitter.on(event, handler),
     once: (event, handler) => emitter.once(event, handler),
     off: (event, handler) => emitter.off(event, handler),
-    commands: () => commandsQueue.iterator()
+    commands: () => commandsQueue.iterator(),
   };
 }

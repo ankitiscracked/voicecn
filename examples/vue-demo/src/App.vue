@@ -1,6 +1,6 @@
 <template>
   <main class="app">
-    <h1>VoiceCN Vue Demo</h1>
+    <h1>useVoice Vue Demo</h1>
     <p>Stage: {{ command.status.stage }}</p>
     <p>Live transcript: {{ command.status.realtimeText ?? "—" }}</p>
     <p>Final transcript: {{ command.status.transcript ?? "—" }}</p>
@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { useVoiceCommand } from "@voicecn/vue";
+import { useVoiceCommand } from "@usevoice/vue";
 import { DemoWebSocket } from "./mockServerSocket";
 
 const command = useVoiceCommand({

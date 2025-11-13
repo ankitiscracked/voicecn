@@ -3,7 +3,7 @@ import type {
   AgentProcessor,
   TranscriptionProvider,
   TranscriptionStream,
-  TtsStreamer
+  SpeechProvider,
 } from "../types";
 import type { VoiceSocketEvent } from "@usevoice/core";
 import { createVoiceWebSocketSession } from "./declarativeVoiceSession";
@@ -14,16 +14,18 @@ class ControlledTranscriptionProvider implements TranscriptionProvider {
     onError: (error: Error) => void;
   } | null = null;
 
-  async createStream(options: Parameters<TranscriptionProvider["createStream"]>[0]): Promise<TranscriptionStream> {
+  async createStream(
+    options: Parameters<TranscriptionProvider["createStream"]>[0]
+  ): Promise<TranscriptionStream> {
     this.listeners = {
       onTranscript: options.onTranscript,
-      onError: options.onError
+      onError: options.onError,
     };
 
     return {
       send: vi.fn(),
       finish: async () => {},
-      abort: vi.fn()
+      abort: vi.fn(),
     };
   }
 
@@ -43,7 +45,7 @@ class ControlledTranscriptionProvider implements TranscriptionProvider {
 class InstantAgentProcessor implements AgentProcessor {
   async process({
     transcript,
-    send
+    send,
   }: Parameters<AgentProcessor["process"]>[0]) {
     await send({
       type: "complete",
@@ -51,17 +53,17 @@ class InstantAgentProcessor implements AgentProcessor {
         intent: "fetch",
         formattedContent: {
           format: "text",
-          content: `agent:${transcript}`
-        }
-      }
+          content: `agent:${transcript}`,
+        },
+      },
     } as VoiceSocketEvent);
   }
 }
 
-class ChunkingTtsStreamer implements TtsStreamer {
+class ChunkingTtsStreamer implements SpeechProvider {
   async stream(
     text: string,
-    handlers: Parameters<TtsStreamer["stream"]>[1]
+    handlers: Parameters<SpeechProvider["stream"]>[1]
   ): Promise<void> {
     handlers.onAudioChunk(new TextEncoder().encode(text).buffer);
     handlers.onClose();
@@ -89,8 +91,8 @@ describe("createVoiceWebSocketSession", () => {
         sendBinary: (chunk) => {
           binaryChunks.push(chunk);
         },
-        close: vi.fn()
-      }
+        close: vi.fn(),
+      },
     });
 
     const commandsIterator = session.commands()[Symbol.asyncIterator]();
@@ -129,7 +131,9 @@ describe("createVoiceWebSocketSession", () => {
 
     expect(collectedText).toEqual(["hello", "hello world"]);
     expect(collectedSpeech).toHaveLength(1);
-    expect(new TextDecoder().decode(collectedSpeech[0])).toBe("agent:hello world");
+    expect(new TextDecoder().decode(collectedSpeech[0])).toBe(
+      "agent:hello world"
+    );
 
     const completeEvent = sentEvents.find((evt) => evt.type === "complete");
     expect(completeEvent?.data?.formattedContent?.content).toBe(
@@ -141,7 +145,7 @@ describe("createVoiceWebSocketSession", () => {
   it("resolves final transcript as null when the command is cancelled", async () => {
     const transcription = new ControlledTranscriptionProvider();
     const agent: AgentProcessor = {
-      process: vi.fn()
+      process: vi.fn(),
     };
 
     const session = createVoiceWebSocketSession({
@@ -151,8 +155,8 @@ describe("createVoiceWebSocketSession", () => {
       transport: {
         sendJson: vi.fn(),
         sendBinary: vi.fn(),
-        close: vi.fn()
-      }
+        close: vi.fn(),
+      },
     });
 
     const iterator = session.commands()[Symbol.asyncIterator]();

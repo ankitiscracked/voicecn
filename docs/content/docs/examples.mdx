@@ -1,0 +1,72 @@
+---
+title: Examples
+description: Explore the demo apps and backends included in the useVoice workspace.
+icon: Play
+---
+
+The repository bundles multiple examples so you can validate both the frontend UX and the backend
+plumbing without writing a line of glue code. Use them as references when integrating useVoice into
+your own stack.
+
+## React demo
+
+- Location: `examples/react-demo`
+- Commands:
+
+  ```bash
+  bun --filter @usevoice/example-react run dev
+  ```
+
+- Highlights:
+  - Toggle between the mock websocket (`VITE_USEVOICE_USE_MOCK=1`) and a real backend (`VITE_USEVOICE_WS_URL`).
+  - Displays `status.stage`, live transcripts, final transcripts, and realtime audio playback meters.
+  - Shows how to consume `audioStream` and `useTtsPlayer` inside a component.
+
+## Vue demo
+
+- Location: `examples/vue-demo`
+- Commands:
+
+  ```bash
+  bun --filter @usevoice/example-vue run dev
+  ```
+
+- Highlights:
+  - Demonstrates the Vue composable API.
+  - Uses the same `DemoWebSocket` mock so you can test UX flows offline.
+
+## Cloudflare Worker
+
+- Location: `examples/cloudflare-worker`
+- Commands:
+
+  ```bash
+  cd examples/cloudflare-worker
+  bun install
+  bun run dev
+  ```
+
+- Highlights:
+  - Wires `VoiceSessionManager` into a Durable Object via `createVoiceDurableObject`.
+  - Provisions Deepgram + Cartesia providers using secrets (`wrangler secret put …`).
+  - Handles `/voice-command/ws` websocket upgrades and exposes a `/health` route for monitoring.
+
+## Docs app
+
+- Location: `docs/`
+- Commands:
+
+  ```bash
+  cd docs
+  bun install
+  bun run dev
+  ```
+
+- Highlights:
+  - Built with FumaDocs + TanStack Start.
+  - Pulls content from `docs/content/docs`.
+  - Shares styles/components you can reuse in your own product documentation.
+
+Feel free to clone any of these setups as a starting point. They intentionally share the exact code
+paths your production app will exercise, so any improvements you make here directly benefit real
+users.

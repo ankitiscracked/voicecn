@@ -1,0 +1,151 @@
+---
+title: Client Integration
+description: Use the core controller, React/Vue hooks, and streaming audio helpers inside your apps.
+icon: Headphones
+---
+
+useVoice ships with framework-agnostic primitives (`@usevoice/core`) plus first-class React and Vue
+bindings. This page focuses on the APIs you will touch most often when building UI.
+
+## Voice command lifecycle
+
+`useVoiceCommand` wraps a `VoiceCommandController` instance and exposes:
+
+```ts
+const {
+  status,             // VoiceCommandStatus
+  results,            // VoiceCommandResult[]
+  queryResponse,      // Most recent fetch intent
+  audioStream,        // AsyncIterable<ArrayBuffer> for streamed TTS
+  isAudioPlaying,     // boolean flag mirrored from the state store
+  recorderStream,     // MediaStream (for waveform visualizers)
+  startRecording,
+  stopRecording,
+  cancelRecording,
+} = useVoiceCommand({ socketOptions });
+```
+
+### Status fields
+
+`VoiceCommandStatus` tracks the recorder and transcription lifecycle:
+
+| Field | Meaning |
+| ----- | ------- |
+| `stage` | `"idle" | "recording" | "transcribing" | "processing" | "completed" | "error"` |
+| `realtimeText` | The latest string from `transcript.partial` events. |
+| `transcript` | The finalized transcript from Deepgram (set on `transcript.final`). |
+| `realtimeStatus` | Friendly hints such as `"listening"`, `"transcribing"`, `"final"`, or `"error"`. |
+| `startedAt` | Timestamp captured when recording begins. |
+
+Use these fields to drive UI badges, disable controls, or surface errors when the websocket closes.
+
+### Socket configuration
+
+Both React and Vue bindings accept either a ready-made `VoiceSocketClient` or a configuration object:
+
+```ts
+const { startRecording } = useVoiceCommand({
+  socketOptions: {
+    url: import.meta.env.VITE_USEVOICE_WS_URL,
+    WebSocketImpl: DemoWebSocket, // optional mock for unit tests
+    idleTimeoutMs: 5 * 60 * 1000,
+    pingIntervalMs: 60_000,
+  },
+});
+```
+
+If your websocket URL depends on auth, provide an async `buildUrl()` instead of `url`.
+
+## Streaming text-to-speech on the client
+
+`VoiceCommandController` now exposes `audioStream: AsyncIterable<ArrayBuffer>` whenever the backend
+emits `tts.start`. Combine that iterable with the React-only `useTtsPlayer` hook to schedule PCM16
+buffers via the Web Audio API:
+
+```tsx
+const player = useTtsPlayer();
+const { audioStream, isAudioPlaying } = useVoiceCommand({ socketOptions });
+
+useEffect(() => {
+  if (!audioStream) return;
+  let cancelled = false;
+
+  (async () => {
+    await player.start();
+    for await (const chunk of audioStream) {
+      if (cancelled) break;
+      await player.addChunk(chunk);
+    }
+    player.finish();
+    await player.waitUntilIdle();
+  })();
+
+  return () => {
+    cancelled = true;
+    player.reset();
+  };
+}, [audioStream, player]);
+```
+
+`isAudioPlaying` mirrors the state store flag so you can drive UI affordances (VU meters, “speaking…”
+labels, etc.) without manually tracking analyser nodes.
+
+## Results and intent payloads
+
+Every `complete` event is normalized into a `VoiceCommandResult`:
+
+```ts
+type VoiceCommandResult = {
+  timestamp: number;
+  confidence: number;
+  data?: {
+    intent: string;
+    transcript: string;
+    formattedContent?: unknown;
+    graphPaths?: unknown[];
+    fallbackResults?: unknown[];
+    timestamp?: number;
+  };
+  error?: string;
+};
+```
+
+Results are stored in reverse chronological order so you can render a timeline. The hook also exposes
+`queryResponse` (the most recent `"fetch"` intent) as a convenience for common assistant flows.
+
+## Vue usage
+
+The Vue composable mirrors the React hook:
+
+```ts
+const command = useVoiceCommand({
+  socketOptions: { url: 'wss://…' },
+});
+
+watch(command.audioStream, async (stream) => {
+  if (!stream) return;
+  for await (const chunk of stream) {
+    // schedule chunk or forward to a worker
+  }
+});
+```
+
+Because the Vue package is SSR-friendly, you can inject a custom `mediaDevices` implementation when
+testing components.
+
+## Notifications and media overrides
+
+Both hooks forward `notifications` and `mediaDevices` options to the underlying controller:
+
+```ts
+useVoiceCommand({
+  notifications: {
+    success: (msg) => toast.success(msg),
+    error: (msg) => toast.error(msg),
+  },
+  mediaDevices: customMediaDevices, // handy for automated tests
+});
+```
+
+Use these escape hatches to integrate with your own recorder UI or to surface toast messages when the
+agent completes work.

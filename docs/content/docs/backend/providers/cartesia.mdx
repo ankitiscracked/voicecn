@@ -1,0 +1,63 @@
+---
+title: Cartesia TTS
+description: Stream raw PCM audio from Cartesia and forward it directly to the client.
+icon: Volume2
+---
+
+`@usevoice/cartesia` exposes a `CartesiaTtsStreamer` that converts agent responses into PCM16 audio.
+It uses Cartesia's SSE API so you receive audio chunks as soon as they are synthesized, keeping the
+client conversation snappy.
+
+## Installation
+
+```bash
+bun add @usevoice/cartesia @cartesia/cartesia-js
+```
+
+## Usage
+
+```ts
+import { CartesiaTtsStreamer } from '@usevoice/cartesia';
+
+const ttsStreamer = new CartesiaTtsStreamer({
+  apiKey: env.CARTESIA_API_KEY,
+  modelId: 'sonic-3',
+  voiceId: env.CARTESIA_VOICE_ID ?? '66c6b81c-ddb7-4892-bdd5-19b5a7be38e7',
+});
+```
+
+### Configuration options
+
+| Option | Default | Notes |
+| ------ | ------- | ----- |
+| `apiKey` | **required** | Secret used to authenticate with Cartesia. |
+| `modelId` | `sonic-3` | Pick any streaming-capable model ID. |
+| `voiceId` | Example voice ID | Replace with a voice you provisioned in Cartesia's dashboard. |
+
+The streamer requests raw PCM output with `encoding: "pcm_s16le"`, `sampleRate: 48_000`, and no
+container. That means the websocket can forward bytes straight to the browser without extra decoding.
+
+## Error handling
+
+- Each SSE event contains either a `chunk` (base64) or an `error`. The streamer converts base64 data
+  into an `ArrayBuffer` and hands it to `onAudioChunk`.
+- When the stream emits `"done"`, the streamer calls `onClose()` so the manager can emit `tts.end`.
+- If any error bubbles up, the promise rejects and the manager sends `{ type: "tts.end", data: { errored: true } }`.
+
+Because the streamer waits for the entire async generator to finish, you can `await` `stream(text)`
+to make sure all audio has been forwarded before closing the websocket.
+
+## Example integration
+
+```ts
+await ttsStreamer.stream(agentText, {
+  onAudioChunk: (chunk) => ws.send(chunk),
+  onClose: () => ws.send(JSON.stringify({ type: 'tts.end' })),
+  onError: (err) => {
+    console.error('Cartesia error', err);
+    ws.send(JSON.stringify({ type: 'tts.end', data: { errored: true } }));
+  },
+});
+```
+
+Pair this with the client-side `audioStream` iterable to play responses incrementally.

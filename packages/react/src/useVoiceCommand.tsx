@@ -7,7 +7,7 @@ import {
   type VoiceSocketClientOptions,
   type VoiceCommandStatus,
   type VoiceAudioStream
-} from "@voicecn/core";
+} from "@usevoice/core";
 
 export interface UseVoiceCommandOptions {
   socket?: VoiceSocketClient;

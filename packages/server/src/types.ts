@@ -1,4 +1,4 @@
-import type { VoiceSocketEvent } from "@voicecn/core";
+import type { VoiceSocketEvent } from "@usevoice/core";
 
 export interface VoiceCommandContext {
   userId: string;
@@ -32,7 +32,7 @@ export interface AgentProcessor {
   }) => Promise<void>;
 }
 
-export interface TtsStreamer {
+export interface SpeechProvider {
   stream: (
     text: string,
     handlers: {
@@ -47,7 +47,7 @@ export interface VoiceSessionOptions {
   userId: string;
   transcriptionProvider: TranscriptionProvider;
   agentProcessor: AgentProcessor;
-  ttsStreamer?: TtsStreamer;
+  speechProvider: SpeechProvider;
   idleTimeoutMs?: number;
   sendJson: (payload: VoiceSocketEvent) => void;
   sendBinary: (chunk: ArrayBuffer) => void;

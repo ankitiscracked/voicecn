@@ -1,0 +1,71 @@
+---
+title: Deepgram Transcription
+description: Configure the Deepgram live transcription provider for realtime partial transcripts.
+icon: Mic
+---
+
+`@usevoice/deepgram` implements the `TranscriptionProvider` contract using Deepgram's Live Listen API.
+It handles the websocket connection, keep-alive pings, buffering while the socket opens, and error
+propagation back to the `VoiceSessionManager`.
+
+## Installation
+
+The package declares `@deepgram/sdk` as an optional peer dependency so you can decide which version
+to ship. Add both to your backend:
+
+```bash
+bun add @usevoice/deepgram @deepgram/sdk
+```
+
+## Usage
+
+```ts
+import { DeepgramTranscriptionProvider } from '@usevoice/deepgram';
+
+const transcriptionProvider = new DeepgramTranscriptionProvider({
+  apiKey: env.DEEPGRAM_API_KEY,
+  model: 'nova-3',
+  defaultEncoding: 'opus',
+  defaultSampleRate: 48_000,
+  keepAliveIntervalMs: 3_000,
+});
+```
+
+### Configuration options
+
+| Option | Default | Notes |
+| ------ | ------- | ----- |
+| `apiKey` | **required** | Secret used to authenticate with Deepgram. |
+| `model` | `nova-3` | Any live-compatible model slug works. |
+| `keepAliveIntervalMs` | `3000` | Interval for `stream.keepAlive()` (helps long sessions). |
+| `defaultEncoding` | `opus` | Passed as `encoding` when the client doesn't provide metadata. |
+| `defaultSampleRate` | `48_000` | Matches the `MediaRecorder` defaults used by the demos. |
+| `defaultChannels` | `1` | Mono audio reduces bandwidth. |
+| `clientFactory` | `createClient` | Inject your own factory when bundling for Workers. |
+
+## Partial vs final transcripts
+
+Deepgram emits `Results` events with an `is_final` flag. The provider forwards every result to the
+manager, which in turn emits `transcript.partial` immediately. When `is_final` is `true`, the manager
+still sends the event as partial (so the UI stays in sync) but also stores the chunk so it can stitch
+together a deterministic final transcript before calling the agent.
+
+If Deepgram reports an error, the provider clears keep-alive timers, rejects the `finish()` promise,
+and lets the manager send `{ type: "error" }` plus a `4000` close code.
+
+## Worker compatibility
+
+Provide a custom `clientFactory` if you need to hydrate Deepgram with a pre-configured fetcher. For
+example, inside a Cloudflare Worker you can avoid the default Bun/Node detection:
+
+```ts
+import { createClient } from '@deepgram/sdk/browser';
+
+const transcriptionProvider = new DeepgramTranscriptionProvider({
+  apiKey: env.DEEPGRAM_API_KEY,
+  clientFactory: createClient,
+});
+```
+
+The rest of the API surface stays the same—the returned `TranscriptionStream` exposes `send`,
+`finish`, and `abort`.

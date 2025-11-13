@@ -1,15 +1,15 @@
-# VoiceCN Cloudflare Worker Example
+# useVoice Cloudflare Worker Example
 
-This worker shows how to wire the shared `VoiceSessionManager` into the Cloudflare Durable Object adapter while using the provider packages:
+This worker shows how to wire the shared useVoice `VoiceSessionManager` into the Cloudflare Durable Object adapter while using the provider packages:
 
-- `@voicecn/deepgram` for speech-to-text (requires `@deepgram/sdk`)
-- `@voicecn/cartesia` for text-to-speech streaming (requires `@cartesia/cartesia-js`)
+- `@usevoice/deepgram` for speech-to-text (requires `@deepgram/sdk`)
+- `@usevoice/cartesia` for text-to-speech streaming (requires `@cartesia/cartesia-js`)
 
 ## Prerequisites
 
 1. Install dependencies inside this folder:
    ```bash
-   cd voicecn/examples/cloudflare-worker
+   cd usevoice/examples/cloudflare-worker
    bun install
    ```
 2. Provide the required secrets:

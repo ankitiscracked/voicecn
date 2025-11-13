@@ -1,8 +1,6 @@
-import { createVoiceDurableObject, MockAgentProcessor } from "@voicecn/server";
-import { DeepgramTranscriptionProvider } from "@voicecn/deepgram";
-import { CartesiaTtsStreamer } from "@voicecn/cartesia";
-import { createClient as createDeepgramClient } from "@deepgram/sdk";
-import { CartesiaClient } from "@cartesia/cartesia-js";
+import { deepgram } from "@usevoice/deepgram";
+import { cartesia } from "@usevoice/cartesia";
+import { createVoiceDurableObject, MockAgentProcessor } from "@usevoice/server";
 
 interface Env {
   VOICE_SESSION: DurableObjectNamespace;
@@ -12,19 +10,9 @@ interface Env {
 }
 
 const VoiceSessionDO = createVoiceDurableObject<Env>({
-  createProviders(env) {
-    return {
-      transcriptionProvider: new DeepgramTranscriptionProvider({
-        apiKey: env.DEEPGRAM_API_KEY,
-      }),
-      agentProcessor: new MockAgentProcessor({
-        responsePrefix: "VoiceCN demo agent:",
-      }),
-      ttsStreamer: new CartesiaTtsStreamer({
-        apiKey: env.CARTESIA_API_KEY,
-      }),
-    };
-  },
+  transcription: (env) => deepgram("nova-3", { apiKey: env.DEEPGRAM_API_KEY }),
+  agent: (env) => new MockAgentProcessor(),
+  speech: (env) => cartesia("sonic-3", { apiKey: env.CARTESIA_API_KEY }),
 });
 
 export default {
@@ -46,7 +34,7 @@ export default {
       return new Response(
         JSON.stringify({
           ok: true,
-          message: "VoiceCN worker running",
+          message: "useVoice worker running",
         }),
         { headers: { "content-type": "application/json" } }
       );

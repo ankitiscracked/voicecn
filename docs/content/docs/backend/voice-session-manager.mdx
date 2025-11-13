@@ -1,0 +1,116 @@
+---
+title: Voice Session Manager
+description: Wire recording events, providers, and websocket lifecycles together on the backend.
+icon: Workflow
+---
+
+`VoiceSessionManager` is the heart of the backend. It is framework-agnostic and only expects three
+providers: a transcription stream, an agent processor, and an optional TTS streamer. Adapters
+(`createVoiceDurableObject`, `attachNodeWebSocketSession`) take care of the environment-specific
+plumbing.
+
+## Lifecycle overview
+
+1. The client sends `{ type: "start" }` once recording begins. The manager:
+   - Instantiates a `TranscriptionStream` via your `TranscriptionProvider`.
+   - Saves the timezone and starts buffering transcript chunks.
+   - Sends `command-started` back to the caller.
+2. Audio blobs arrive as binary websocket frames. The manager forwards each chunk to the
+   transcription stream.
+3. When the client sends `{ type: "end" }`, the manager calls `transcriber.finish()` and stitches the
+   final transcript together from both interim and final STT events.
+4. The aggregated transcript is passed to the configured `AgentProcessor`. Any events emitted by the
+   agent (`tool-message`, `complete`, custom payloads) are proxied back to the client unchanged.
+5. If a `TtsStreamer` is supplied and the agent returns formatted content, the manager starts a
+   `tts.start`/`tts.end` block and forwards raw PCM chunks over the websocket.
+
+Clients can also send `{ type: "cancel" }` to abort the current command. The manager tears down the
+transcription stream, notifies the controller, and waits for the next `start`.
+
+## Transcription events
+
+The manager relays every STT callback as `transcript.partial`, even if Deepgram marks it as final.
+This keeps the client UI responsive—`status.realtimeText` updates on each interim token. When the
+session completes, the manager also emits `transcript.final` so you have a definitive bound for the
+command.
+
+```ts
+this.options.sendJson({
+  type: 'transcript.partial',
+  data: { transcript: aggregate },
+});
+```
+
+If the STT provider raises an error, the manager propagates it, sends `{ type: "error" }`, and closes
+the websocket with a helpful reason.
+
+## Agent integration
+
+Implement `AgentProcessor.process()` however you like—call into a graph, forward the transcript to a
+LLM, or simply echo the response. The mock processor in `@usevoice/server` shows the shape:
+
+```ts
+export class MockAgentProcessor implements AgentProcessor {
+  async process({ transcript, send }) {
+    await send({
+      type: 'complete',
+      data: {
+        intent: 'fetch',
+        formattedContent: {
+          format: 'paragraph',
+          content: `Agent response: ${transcript}`,
+        },
+        timestamp: Date.now(),
+      },
+    });
+  }
+}
+```
+
+Whatever the agent emits is recorded in the client's `results` array verbatim.
+
+## TTS streaming
+
+When `TtsStreamer.stream()` resolves, the manager ends the audio session and sets `tts.end`. If an
+error bubbles up, it still emits `tts.end` with `{ errored: true }` so the client can reset without
+waiting indefinitely.
+
+```ts
+await ttsStreamer.stream(text, {
+  onAudioChunk: (chunk) => this.options.sendBinary(chunk),
+  onClose: () => this.options.sendJson({ type: 'tts.end' }),
+  onError: (error) => {
+    this.sendError(error.message);
+    this.options.sendJson({ type: 'tts.end', data: { errored: true } });
+  },
+});
+```
+
+## Running inside a Cloudflare Durable Object
+
+`createVoiceDurableObject` wires session creation, socket acceptance, and reconnection. Provide
+factory functions for each provider so a fresh instance is created per WebSocket session:
+
+```ts
+const VoiceSessionDO = createVoiceDurableObject({
+  createTranscriptionProvider(env) {
+    return new DeepgramTranscriptionProvider({
+      apiKey: env.DEEPGRAM_API_KEY,
+    });
+  },
+  createAgentProcessor(env, userId) {
+    return new MockAgentProcessor({
+      responsePrefix: `useVoice agent (${userId}):`,
+    });
+  },
+  createTtsStreamer(env) {
+    return new CartesiaTtsStreamer({
+      apiKey: env.CARTESIA_API_KEY,
+      voiceId: env.CARTESIA_VOICE_ID,
+    });
+  },
+});
+```
+
+The Durable Object persists the declarative session across reconnects, so if the client reloads you
+can resume streaming without creating duplicate providers.

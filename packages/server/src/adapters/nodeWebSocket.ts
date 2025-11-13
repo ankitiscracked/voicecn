@@ -2,7 +2,7 @@ import { VoiceSessionManager } from "../session/voiceSessionManager";
 import type {
   AgentProcessor,
   TranscriptionProvider,
-  TtsStreamer
+  SpeechProvider,
 } from "../types";
 
 export interface NodeWebSocketLike {
@@ -20,7 +20,7 @@ export interface NodeWebSocketAdapterOptions {
   userId: string;
   transcriptionProvider: TranscriptionProvider;
   agentProcessor: AgentProcessor;
-  ttsStreamer?: TtsStreamer;
+  speechProvider: SpeechProvider;
 }
 
 const NODE_WS_OPEN_STATE = 1;
@@ -30,13 +30,13 @@ export function attachNodeWebSocketSession({
   userId,
   transcriptionProvider,
   agentProcessor,
-  ttsStreamer
+  speechProvider,
 }: NodeWebSocketAdapterOptions) {
   const manager = new VoiceSessionManager({
     userId,
     transcriptionProvider,
     agentProcessor,
-    ttsStreamer,
+    speechProvider,
     sendJson: (payload) => {
       if (ws.readyState === NODE_WS_OPEN_STATE) {
         ws.send(JSON.stringify(payload));
@@ -49,7 +49,7 @@ export function attachNodeWebSocketSession({
     },
     closeSocket: (code, reason) => {
       ws.close(code, reason);
-    }
+    },
   });
 
   manager.handleOpen();

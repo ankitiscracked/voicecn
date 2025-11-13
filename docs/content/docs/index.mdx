@@ -1,0 +1,58 @@
+---
+title: useVoice
+description: Learn what lives inside the useVoice workspace and how the moving pieces fit together.
+icon: BookOpen
+---
+
+useVoice is a multi-runtime voice AI SDK that pairs a realtime speech interface on the client with
+pluggable transcription, agent, and text-to-speech providers on the backend. The monorepo is managed
+with Bun workspaces so every package shares tooling and typechecking.
+
+<Cards>
+  <Card
+    title="Get set up quickly"
+    description="Run the demos and connect them to the Cloudflare Worker backend."
+    href="/docs/quickstart"
+  />
+  <Card
+    title="Understand the architecture"
+    description="See how the controller, state store, session manager, and providers interact."
+    href="/docs/architecture"
+  />
+  <Card
+    title="Build client experiences"
+    description="Use the React and Vue bindings plus the streaming audio utilities."
+    href="/docs/client/integration"
+  />
+  <Card
+    title="Bring your own providers"
+    description="Swap in Deepgram, Cartesia, or custom services on the server."
+    href="/docs/backend/voice-session-manager"
+  />
+</Cards>
+
+## What useVoice gives you
+
+- **Realtime streaming transcripts** sourced from Deepgram (or any `TranscriptionProvider`) and
+  forwarded as `transcript.partial` websocket events the moment STT returns an interim result.
+- **Incremental audio playback** over the same socket: the server emits raw PCM chunks between
+  `tts.start`/`tts.end`, and the React hook exposes an async iterable you can render or pipe into
+  the provided TTS player.
+- **Agent orchestration** via the `VoiceSessionManager`: once a transcript finalizes, it invokes
+  your `AgentProcessor` (mock or production) and forwards the structured response back to the client.
+- **Framework adapters** for React, Vue, Cloudflare Durable Objects, and mocked sockets so you can
+  test both UX and backend flows locally.
+
+## Workspace layout
+
+| Package / Example            | Purpose |
+| ---------------------------- | ------- |
+| `@usevoice/core`              | Recorder + socket controller, async audio streams, and shared state store. |
+| `@usevoice/react` / `@usevoice/vue` | Framework bindings that expose `useVoiceCommand` plus React-only helpers like `useTtsPlayer`. |
+| `@usevoice/server`            | `VoiceSessionManager`, node/Durable Object adapters, and provider contracts. |
+| `@usevoice/deepgram` / `@usevoice/cartesia` | Production provider implementations for Deepgram STT and Cartesia TTS. |
+| `examples/react-demo` / `examples/vue-demo` | Frontend playgrounds that can run against the mock socket or your Cloudflare Worker. |
+| `examples/cloudflare-worker` | Durable Object backend that wires Deepgram + Cartesia into the session manager. |
+
+Use the navigation on the left to dive into detailed setup guides, client integration notes, and the
+provider-specific configuration you need for production environments.

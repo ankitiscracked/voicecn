@@ -1,2 +1,2 @@
-export * from "./cartesiaTtsStreamer";
+export * from "./cartesiaSpeechProvider";
 export * from "./cartesia";

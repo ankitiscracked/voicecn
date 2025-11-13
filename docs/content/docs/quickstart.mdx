@@ -1,0 +1,99 @@
+---
+title: Quickstart
+description: Run the demos, connect them to the Cloudflare Worker backend, and verify live transcripts plus audio playback.
+icon: Rocket
+---
+
+useVoice ships with everything you need to exercise the realtime UX locally. Use this guide to install
+dependencies, run the demo apps, and hook them up to the serverless worker.
+
+## Prerequisites
+
+- [Bun](https://bun.sh) `1.1.26` or newer (matches the workspace lockfile).
+- A Deepgram API key plus a Cartesia API key / voice ID if you plan to test the end-to-end worker.
+- Optional: Cloudflare Wrangler if you want to deploy or run the Durable Object locally.
+
+## 1. Install dependencies
+
+```bash
+bun install
+```
+
+The workspace uses Bun workspaces, so the command above bootstraps every package and example,
+including the FumaDocs site in `docs/`.
+
+## 2. Run a frontend demo
+
+Pick either framework (commands assume the React example):
+
+```bash
+bun --filter @usevoice/example-react run dev
+```
+
+By default the example connects to the mock socket so you can exercise the UI without a backend. Set
+`VITE_USEVOICE_USE_MOCK=0` and provide a websocket URL to talk to the Cloudflare worker instead:
+
+```bash
+cd examples/react-demo
+echo 'VITE_USEVOICE_WS_URL=ws://127.0.0.1:8787/voice-command/ws?userId=demo' > .env.local
+echo 'VITE_USEVOICE_USE_MOCK=0' >> .env.local
+```
+
+Visit `http://localhost:5173` (or whatever port Vite prints) and click **Start Recording**. The UI
+should display the `status.realtimeText` field as `transcript.partial` events stream in and then
+render the final transcript once the command completes.
+
+## 3. Start the Cloudflare Worker backend
+
+```bash
+cd examples/cloudflare-worker
+bun install
+wrangler secret put DEEPGRAM_API_KEY
+wrangler secret put CARTESIA_API_KEY
+wrangler secret put CARTESIA_VOICE_ID
+bun run dev
+```
+
+The worker exposes `ws://127.0.0.1:8787/voice-command/ws`. Each websocket session spins up a
+`VoiceSessionManager` that proxies audio into Deepgram, processes the transcript with the mock agent,
+and streams Cartesia PCM audio back to the caller.
+
+## 4. Verify streaming audio
+
+On the client, call `useVoiceCommand` and `useTtsPlayer`:
+
+```tsx
+const { audioStream, startRecording, stopRecording } = useVoiceCommand({ socketOptions });
+const player = useTtsPlayer();
+
+useEffect(() => {
+  if (!audioStream) return;
+  let cancelled = false;
+
+  (async () => {
+    await player.start();
+    for await (const chunk of audioStream) {
+      if (cancelled) break;
+      await player.addChunk(chunk);
+    }
+    player.finish();
+  })();
+
+  return () => {
+    cancelled = true;
+    player.reset();
+  };
+}, [audioStream, player]);
+```
+
+The worker emits `tts.start` before sending raw PCM16 chunks, and `tts.end` after the response
+finishes. The hook above consumes the async iterable and schedules the buffers via the Web Audio API.
+
+## 5. Explore more examples
+
+- `bun --filter @usevoice/example-vue run dev` for the Vue demo.
+- `bun run dev` from the repo root to start every workspace `dev` script.
+- `bun run docs --filter docs dev` if you want to iterate on these docs with hot reload.
+
+Once you are happy with the local setup, continue with the architecture and backend guides to wire
+your own providers or deploy to Cloudflare.

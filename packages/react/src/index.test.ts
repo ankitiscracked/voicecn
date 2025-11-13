@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useVoiceCommand } from "./useVoiceCommand";
-import { VoiceCommandStateStore } from "@voicecn/core";
+import { VoiceCommandStateStore } from "@usevoice/core";
 
 class MockSocket {
   listeners = new Set<(event: any) => void>();
@@ -16,7 +16,7 @@ class MockSocket {
   }
 }
 
-describe("@voicecn/react useVoiceCommand", () => {
+describe("@usevoice/react useVoiceCommand", () => {
   it("subscribes to state updates", async () => {
     const store = new VoiceCommandStateStore();
     const socket = new MockSocket();

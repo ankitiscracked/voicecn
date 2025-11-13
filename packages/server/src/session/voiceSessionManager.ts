@@ -2,10 +2,10 @@ import type {
   AgentProcessor,
   TranscriptionProvider,
   TranscriptionStream,
-  TtsStreamer,
-  VoiceSessionOptions
+  SpeechProvider,
+  VoiceSessionOptions,
 } from "../types";
-import type { VoiceSocketEvent } from "@voicecn/core";
+import type { VoiceSocketEvent } from "@usevoice/core";
 
 type ClientPayload =
   | { type: "start"; timezone?: string; audio?: AudioConfig }
@@ -31,7 +31,7 @@ const FIVE_MINUTES_IN_MS = 5 * 60 * 1000;
 export class VoiceSessionManager {
   private transcriptionProvider: TranscriptionProvider;
   private agentProcessor: AgentProcessor;
-  private ttsStreamer?: TtsStreamer;
+  private speechProvider: SpeechProvider;
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private lastActivity = Date.now();
   private activeCommand: ActiveCommand | null = null;
@@ -39,7 +39,7 @@ export class VoiceSessionManager {
   constructor(private options: VoiceSessionOptions) {
     this.transcriptionProvider = options.transcriptionProvider;
     this.agentProcessor = options.agentProcessor;
-    this.ttsStreamer = options.ttsStreamer;
+    this.speechProvider = options.speechProvider;
   }
 
   handleOpen() {
@@ -47,9 +47,8 @@ export class VoiceSessionManager {
     this.options.sendJson({
       type: "ready",
       data: {
-        message: "voice channel established",
-        timeoutMs: this.options.idleTimeoutMs ?? FIVE_MINUTES_IN_MS
-      }
+        timeoutMs: this.options.idleTimeoutMs ?? FIVE_MINUTES_IN_MS,
+      },
     });
   }
 
@@ -70,7 +69,9 @@ export class VoiceSessionManager {
 
   handleClose(code?: number, reason?: string) {
     this.clearInactivityTimer();
-    this.teardownActiveCommand(reason ?? `socket closed (${code ?? "unknown"})`);
+    this.teardownActiveCommand(
+      reason ?? `socket closed (${code ?? "unknown"})`
+    );
   }
 
   private async handleJson(raw: string) {
@@ -95,7 +96,7 @@ export class VoiceSessionManager {
       case "ping":
         this.options.sendJson({
           type: "pong",
-          data: { timestamp: payload.timestamp ?? Date.now() }
+          data: { timestamp: payload.timestamp ?? Date.now() },
         });
         break;
       default:
@@ -103,7 +104,9 @@ export class VoiceSessionManager {
     }
   }
 
-  private async startCommand(payload: Extract<ClientPayload, { type: "start" }>) {
+  private async startCommand(
+    payload: Extract<ClientPayload, { type: "start" }>
+  ) {
     if (this.activeCommand) {
       this.sendError("A command is already in progress");
       return;
@@ -115,20 +118,22 @@ export class VoiceSessionManager {
         sampleRate: payload.audio?.sampleRate,
         channels: payload.audio?.channels,
         onTranscript: (event) => this.handleTranscript(event),
-        onError: (error) => this.handleTranscriptionError(error)
+        onError: (error) => this.handleTranscriptionError(error),
       });
 
       this.activeCommand = {
         timezone: payload.timezone ?? "UTC",
         transcriber,
         finalTranscriptChunks: [],
-        startedAt: Date.now()
+        startedAt: Date.now(),
       };
 
       this.options.sendJson({ type: "command-started" });
     } catch (error) {
       this.sendError(
-        error instanceof Error ? error.message : "Failed to start transcription stream"
+        error instanceof Error
+          ? error.message
+          : "Failed to start transcription stream"
       );
     }
   }
@@ -141,7 +146,9 @@ export class VoiceSessionManager {
 
     try {
       await this.activeCommand.transcriber.finish();
-      const finalTranscript = this.activeCommand.finalTranscriptChunks.join(" ").trim();
+      const finalTranscript = this.activeCommand.finalTranscriptChunks
+        .join(" ")
+        .trim();
       await this.processTranscript(finalTranscript);
     } catch (error) {
       this.sendError(
@@ -177,7 +184,7 @@ export class VoiceSessionManager {
   private async processTranscript(transcript: string) {
     this.options.sendJson({
       type: "transcript.final",
-      data: { transcript }
+      data: { transcript },
     });
 
     if (!this.activeCommand) {
@@ -189,7 +196,7 @@ export class VoiceSessionManager {
         transcript,
         userId: this.options.userId,
         timezone: this.activeCommand.timezone,
-        send: (event) => this.forwardAgentEvent(event)
+        send: (event) => this.forwardAgentEvent(event),
       });
     } catch (error) {
       this.sendError(
@@ -212,7 +219,7 @@ export class VoiceSessionManager {
       return;
     }
 
-    if (!this.ttsStreamer) {
+    if (!this.speechProvider) {
       return;
     }
 
@@ -221,13 +228,13 @@ export class VoiceSessionManager {
       data: {
         encoding: "linear16",
         sampleRate: 48000,
-        mimeType: "audio/raw"
-      }
+        mimeType: "audio/raw",
+      },
     });
 
     let handled = false;
     try {
-      await this.ttsStreamer.stream(text, {
+      await this.speechProvider.stream(text, {
         onAudioChunk: (chunk) => this.options.sendBinary(chunk),
         onClose: () => {
           this.options.sendJson({ type: "tts.end" });
@@ -236,7 +243,7 @@ export class VoiceSessionManager {
           handled = true;
           this.sendError(error.message);
           this.options.sendJson({ type: "tts.end", data: { errored: true } });
-        }
+        },
       });
     } catch (error) {
       if (!handled) {
@@ -254,7 +261,10 @@ export class VoiceSessionManager {
     }
 
     const trimmed = event.transcript.trim();
-    if (trimmed.length === 0 && this.activeCommand.finalTranscriptChunks.length === 0) {
+    if (
+      trimmed.length === 0 &&
+      this.activeCommand.finalTranscriptChunks.length === 0
+    ) {
       return;
     }
 
@@ -274,20 +284,23 @@ export class VoiceSessionManager {
       if (aggregate.length > 0) {
         this.options.sendJson({
           type: "transcript.partial",
-          data: { transcript: aggregate }
+          data: { transcript: aggregate },
         });
       }
       return;
     }
 
-    const aggregate = combine(...this.activeCommand.finalTranscriptChunks, trimmed);
+    const aggregate = combine(
+      ...this.activeCommand.finalTranscriptChunks,
+      trimmed
+    );
     if (aggregate.length === 0) {
       return;
     }
 
     this.options.sendJson({
       type: "transcript.partial",
-      data: { transcript: aggregate }
+      data: { transcript: aggregate },
     });
   }
 
@@ -304,6 +317,8 @@ export class VoiceSessionManager {
     try {
       this.activeCommand.transcriber.abort(reason);
     } catch {
+      console.error("Failed to abort transcription stream", reason);
+      this.sendError(`Failed to abort transcription stream: ${reason}`);
       // ignore
     }
     this.activeCommand = null;
@@ -312,7 +327,7 @@ export class VoiceSessionManager {
   private sendError(message: string) {
     this.options.sendJson({
       type: "error",
-      data: { error: message }
+      data: { error: message },
     });
   }
 
@@ -336,7 +351,7 @@ export class VoiceSessionManager {
       if (idleTime >= timeout) {
         this.options.sendJson({
           type: "timeout",
-          data: { idleMs: idleTime }
+          data: { idleMs: idleTime },
         });
         this.options.closeSocket(4000, "idle timeout");
       } else {

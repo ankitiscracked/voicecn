@@ -5,3 +5,4 @@ dist
 bun.lockb
 coverage
 *.tsbuildinfo
+examples/cloudflare-worker/.wrangler
