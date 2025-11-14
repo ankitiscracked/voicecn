@@ -2,7 +2,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useCallback,
   useSyncExternalStore,
 } from "react";
 import {
@@ -41,6 +40,7 @@ export interface UseVoiceCommandResult {
 export function useVoiceCommand(
   options: UseVoiceCommandOptions = {}
 ): UseVoiceCommandResult {
+  // Keep useMemo for bridge since it has side effects and manages subscriptions
   const bridge = useMemo(
     () =>
       createVoiceCommandBridge({
@@ -96,17 +96,17 @@ export function useVoiceCommand(
     return () => bridge.destroy();
   }, [bridge]);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = async () => {
     await bridge.controller.startRecording();
-  }, [bridge]);
+  };
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = () => {
     bridge.controller.stopRecording();
-  }, [bridge]);
+  };
 
-  const cancelRecording = useCallback(async () => {
+  const cancelRecording = async () => {
     await bridge.controller.cancelRecording();
-  }, [bridge]);
+  };
 
   return {
     status,
