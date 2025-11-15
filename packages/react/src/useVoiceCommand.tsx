@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   VoiceCommandResult,
   type VoiceSocketClientOptions,
@@ -73,6 +68,7 @@ export function useVoiceCommand(
     (callback) => store.subscribeResults(callback),
     () => store.getResults()
   );
+  console.log("reactive results", results);
   const audioStream = useSyncExternalStore(
     (callback) => store.subscribeAudioStream(callback),
     () => store.getAudioStream()

@@ -106,55 +106,135 @@ export default function App() {
     await startRecording();
   };
 
+  const latestResult = results.length > 0 ? results[results.length - 1] : null;
+  const finalTranscript = latestResult?.data?.transcript;
+
+  // Determine which animation to show
+  const isRecording = status.stage === "recording";
+  const isProcessing =
+    status.stage === "processing" || status.stage === "transcribing";
+  const isPlaying = isAudioPlaying;
+
   return (
-    <div style={{ fontFamily: "sans-serif", maxWidth: 520, margin: "0 auto" }}>
-      <h1>useVoice React Demo</h1>
-      <p>
-        Mode:{" "}
-        <strong>{useMockSocket ? "Mock socket" : "Cloudflare worker"}</strong>
-      </p>
-      <p>Stage: {status.stage}</p>
-      <p>Live transcript: {status.transcript ?? "—"}</p>
-      <p>Final transcript: {status.transcript ?? "—"}</p>
-      <p>
-        Response audio:{" "}
-        {isAudioPlaying ? (
-          <span style={{ color: "#2563eb" }}>streaming…</span>
-        ) : (
-          "—"
-        )}
-      </p>
-      {isAudioPlaying && (
-        <div style={{ marginBottom: 12 }}>
-          <div
-            style={{
-              height: 8,
-              background: "#dbeafe",
-              borderRadius: 999,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${Math.min(100, Math.round(playbackLevel * 120))}%`,
-                background: "#2563eb",
-                transition: "width 120ms linear",
-              }}
-            />
-          </div>
+    <div className="p-6 w-1/2 mx-auto border border-stone-200 rounded-md mt-24">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Status Display Area */}
+        <div className="bg-white rounded-lg shadow-sm p-8 min-h-[200px] flex items-center justify-center">
+          {/* Recording Animation */}
+          {isRecording && (
+            <div className="flex items-center flex-col gap-8">
+              <div className="relative">
+                <div className="w-20 h-20 bg-red-400 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 w-20 h-20 bg-red-400 rounded-full animate-ping opacity-75"></div>
+              </div>
+              {status.transcript && (
+                <p className="text-xl font-medium text-stone-800 leading-relaxed">
+                  {status.transcript}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Processing Animation */}
+          {isProcessing && !isRecording && (
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "450ms" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                style={{ animationDelay: "600ms" }}
+              ></div>
+            </div>
+          )}
+
+          {/* TTS Playing Animation */}
+          {isPlaying && !isRecording && !isProcessing && (
+            <div className="flex items-end justify-center gap-1.5 h-20">
+              <div
+                className="w-2 bg-stone-500 rounded-full sound-wave-bar"
+                style={{ height: "20px" }}
+              ></div>
+              <div
+                className="w-2 bg-stone-500 rounded-full sound-wave-bar"
+                style={{ height: "40px" }}
+              ></div>
+              <div
+                className="w-2 bg-stone-500 rounded-full sound-wave-bar"
+                style={{ height: "60px" }}
+              ></div>
+              <div
+                className="w-2 bg-stone-500 rounded-full sound-wave-bar"
+                style={{ height: "40px" }}
+              ></div>
+              <div
+                className="w-2 bg-stone-500 rounded-full sound-wave-bar"
+                style={{ height: "20px" }}
+              ></div>
+            </div>
+          )}
+
+          {/* Idle State */}
+          {!isRecording && !isProcessing && !isPlaying && (
+            <div className="text-stone-500 text-lg font-semibold">
+              Start recording
+            </div>
+          )}
         </div>
-      )}
-      <button onClick={handleToggle}>
-        {status.stage === "recording" ? "Stop" : "Start Recording"}
-      </button>
-      {autoDemo && <p>Simulating...</p>}
-      <section>
-        <h2>Results</h2>
-        <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 8 }}>
-          {JSON.stringify(results, null, 2)}
-        </pre>
-      </section>
+
+        {/* Response Section */}
+        {latestResult && (
+          <div className="space-y-2 flex flex-col items-center">
+            <div className="text-sm font-semibold text-stone-500 tracking-wide">
+              Response
+            </div>
+            <p className="text-gray-900 leading-relaxed overflow-y-auto max-h-60 border border-stone-200 rounded-md p-2">
+              {latestResult.data?.formattedContent?.content as string}
+            </p>
+          </div>
+        )}
+
+        {/* Control Button */}
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={handleToggle}
+            disabled={isPlaying || isProcessing}
+            className={`flex items-center gap-2 px-6 py-3 border-[1.5px] border-stone-500 rounded-md hover:bg-stone-200 transition-colors font-medium text-base ${
+              isPlaying || isProcessing ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            {isRecording ? (
+              <>
+                <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                <span>Stop</span>
+              </>
+            ) : (
+              <>
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>Record</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Debug Info */}
+        {autoDemo && (
+          <div className="text-center text-xs text-gray-500">Simulating...</div>
+        )}
+      </div>
     </div>
   );
 }

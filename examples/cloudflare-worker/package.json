@@ -8,12 +8,14 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@ai-sdk/google": "^2.0.32",
     "@cartesia/cartesia-js": "^2.2.9",
     "@deepgram/sdk": "^4.11.2",
     "@usevoice/cartesia": "workspace:*",
     "@usevoice/core": "workspace:*",
     "@usevoice/deepgram": "workspace:*",
-    "@usevoice/server": "workspace:*"
+    "@usevoice/server": "workspace:*",
+    "ai": "^5.0.93"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241004.0",

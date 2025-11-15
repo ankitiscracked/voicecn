@@ -1,5 +1,9 @@
 import type { VoiceSocketEvent } from "@usevoice/core";
 
+export interface Env {
+  [key: string]: any;
+}
+
 export interface VoiceCommandContext {
   userId: string;
   transcript: string;
@@ -25,6 +29,7 @@ export interface TranscriptionProvider {
 
 export interface AgentProcessor {
   process: (options: {
+    env: Env;
     transcript: string;
     userId: string;
     timezone: string;

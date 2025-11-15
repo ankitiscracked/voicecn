@@ -30,6 +30,7 @@
     "vue": "^3.5.12"
   },
   "dependencies": {
-    "react-fast-marquee": "^1.6.5"
+    "react-fast-marquee": "^1.6.5",
+    "zod": "^4.1.12"
   }
 }

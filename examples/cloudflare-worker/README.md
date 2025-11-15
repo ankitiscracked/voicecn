@@ -1,4 +1,4 @@
-# useVoice Cloudflare Worker Example
+# usevoiceai Cloudflare Worker Example
 
 This worker shows how to wire the shared useVoice `VoiceSessionManager` into the Cloudflare Durable Object adapter while using the provider packages:
 
