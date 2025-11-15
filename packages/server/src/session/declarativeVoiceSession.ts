@@ -1,10 +1,10 @@
-import type { VoiceSocketEvent } from "@usevoice/core";
+import type { VoiceSocketEvent } from "@usevoiceai/core";
 import type {
   AgentProcessor,
   TranscriptionProvider,
   SpeechProvider,
 } from "../types";
-import { VoiceSessionManager } from "./voiceSessionManager";
+import { VoiceSession } from "./voiceSession";
 import { createAsyncQueue, type AsyncQueue } from "../utils/asyncQueue";
 import { createDeferred, type Deferred } from "../utils/deferred";
 import { EventEmitter } from "../utils/eventEmitter";
@@ -79,7 +79,7 @@ type CommandChannels = {
   closed: boolean;
 };
 
-export function createVoiceWebSocketSession(
+export function createVoiceSession(
   options: DeclarativeVoiceSessionOptions
 ): DeclarativeVoiceSession {
   const emitter = new EventEmitter<Record<string, unknown>>();
@@ -87,7 +87,7 @@ export function createVoiceWebSocketSession(
   let commandCounter = 0;
   let activeCommand: CommandChannels | null = null;
 
-  const manager = new VoiceSessionManager({
+  const manager = new VoiceSession({
     userId: options.userId,
     transcriptionProvider: options.providers.transcription,
     agentProcessor: options.providers.agent,

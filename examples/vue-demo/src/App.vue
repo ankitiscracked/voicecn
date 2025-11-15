@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { useVoiceCommand } from "@usevoice/vue";
+import { useVoiceCommand } from "@usevoiceai/vue";
 import { DemoWebSocket } from "./mockServerSocket";
 
 const command = useVoiceCommand({

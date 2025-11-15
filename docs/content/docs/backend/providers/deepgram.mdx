@@ -4,7 +4,7 @@ description: Configure the Deepgram live transcription provider for realtime par
 icon: Mic
 ---
 
-`@usevoice/deepgram` implements the `TranscriptionProvider` contract using Deepgram's Live Listen API.
+`@usevoiceai/deepgram` implements the `TranscriptionProvider` contract using Deepgram's Live Listen API.
 It handles the websocket connection, keep-alive pings, buffering while the socket opens, and error
 propagation back to the `VoiceSessionManager`.
 
@@ -14,13 +14,13 @@ The package declares `@deepgram/sdk` as an optional peer dependency so you can d
 to ship. Add both to your backend:
 
 ```bash
-bun add @usevoice/deepgram @deepgram/sdk
+bun add @usevoiceai/deepgram @deepgram/sdk
 ```
 
 ## Usage
 
 ```ts
-import { DeepgramTranscriptionProvider } from '@usevoice/deepgram';
+import { DeepgramTranscriptionProvider } from '@usevoiceai/deepgram';
 
 const transcriptionProvider = new DeepgramTranscriptionProvider({
   apiKey: env.DEEPGRAM_API_KEY,

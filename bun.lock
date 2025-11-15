@@ -22,16 +22,16 @@
       },
     },
     "examples/cloudflare-worker": {
-      "name": "@usevoice/example-worker",
+      "name": "@usevoiceai/example-worker",
       "version": "0.1.0",
       "dependencies": {
         "@ai-sdk/google": "^2.0.32",
         "@cartesia/cartesia-js": "^2.2.9",
         "@deepgram/sdk": "^4.11.2",
-        "@usevoice/cartesia": "workspace:*",
-        "@usevoice/core": "workspace:*",
-        "@usevoice/deepgram": "workspace:*",
-        "@usevoice/server": "workspace:*",
+        "@usevoiceai/cartesia": "workspace:*",
+        "@usevoiceai/core": "workspace:*",
+        "@usevoiceai/deepgram": "workspace:*",
+        "@usevoiceai/server": "workspace:*",
         "ai": "^5.0.93",
       },
       "devDependencies": {
@@ -41,11 +41,11 @@
       },
     },
     "examples/react-demo": {
-      "name": "@usevoice/example-react",
+      "name": "@usevoiceai/example-react",
       "dependencies": {
         "@types/react": "^19.2.4",
         "@types/react-dom": "^19.2.3",
-        "@usevoice/react": "workspace:*",
+        "@usevoiceai/react": "workspace:*",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
       },
@@ -59,9 +59,9 @@
       },
     },
     "examples/vue-demo": {
-      "name": "@usevoice/example-vue",
+      "name": "@usevoiceai/example-vue",
       "dependencies": {
-        "@usevoice/vue": "workspace:*",
+        "@usevoiceai/vue": "workspace:*",
         "vue": "^3.5.12",
       },
       "devDependencies": {
@@ -70,11 +70,18 @@
         "vite": "^5.4.8",
       },
     },
-    "packages/cartesia": {
-      "name": "@usevoice/cartesia",
+    "packages/core": {
+      "name": "@usevoiceai/core",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^22.8.1",
+      },
+    },
+    "packages/providers/cartesia": {
+      "name": "@usevoiceai/cartesia",
       "version": "0.1.0",
       "dependencies": {
-        "@usevoice/server": "workspace:*",
+        "@usevoiceai/server": "workspace:*",
       },
       "peerDependencies": {
         "@cartesia/cartesia-js": "^2.2.9",
@@ -83,18 +90,11 @@
         "@cartesia/cartesia-js",
       ],
     },
-    "packages/core": {
-      "name": "@usevoice/core",
-      "version": "0.1.0",
-      "devDependencies": {
-        "@types/node": "^22.8.1",
-      },
-    },
-    "packages/deepgram": {
-      "name": "@usevoice/deepgram",
+    "packages/providers/deepgram": {
+      "name": "@usevoiceai/deepgram",
       "version": "0.1.0",
       "dependencies": {
-        "@usevoice/server": "workspace:*",
+        "@usevoiceai/server": "workspace:*",
       },
       "peerDependencies": {
         "@deepgram/sdk": "^3.3.0",
@@ -104,10 +104,10 @@
       ],
     },
     "packages/react": {
-      "name": "@usevoice/react",
+      "name": "@usevoiceai/react",
       "version": "0.1.0",
       "dependencies": {
-        "@usevoice/core": "workspace:*",
+        "@usevoiceai/core": "workspace:*",
       },
       "devDependencies": {
         "@babel/core": "^7.28.5",
@@ -118,17 +118,17 @@
       },
     },
     "packages/server": {
-      "name": "@usevoice/server",
+      "name": "@usevoiceai/server",
       "version": "0.1.0",
       "dependencies": {
-        "@usevoice/core": "workspace:*",
+        "@usevoiceai/core": "workspace:*",
       },
     },
     "packages/vue": {
-      "name": "@usevoice/vue",
+      "name": "@usevoiceai/vue",
       "version": "0.1.0",
       "dependencies": {
-        "@usevoice/core": "workspace:*",
+        "@usevoiceai/core": "workspace:*",
       },
       "peerDependencies": {
         "vue": "^3.4.0",
@@ -442,23 +442,23 @@
 
     "@types/react-dom": ["@types/react-dom@19.2.3", "", { "peerDependencies": { "@types/react": "^19.2.0" } }, "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ=="],
 
-    "@usevoice/cartesia": ["@usevoice/cartesia@workspace:packages/cartesia"],
+    "@usevoiceai/cartesia": ["@usevoiceai/cartesia@workspace:packages/providers/cartesia"],
 
-    "@usevoice/core": ["@usevoice/core@workspace:packages/core"],
+    "@usevoiceai/core": ["@usevoiceai/core@workspace:packages/core"],
 
-    "@usevoice/deepgram": ["@usevoice/deepgram@workspace:packages/deepgram"],
+    "@usevoiceai/deepgram": ["@usevoiceai/deepgram@workspace:packages/providers/deepgram"],
 
-    "@usevoice/example-react": ["@usevoice/example-react@workspace:examples/react-demo"],
+    "@usevoiceai/example-react": ["@usevoiceai/example-react@workspace:examples/react-demo"],
 
-    "@usevoice/example-vue": ["@usevoice/example-vue@workspace:examples/vue-demo"],
+    "@usevoiceai/example-vue": ["@usevoiceai/example-vue@workspace:examples/vue-demo"],
 
-    "@usevoice/example-worker": ["@usevoice/example-worker@workspace:examples/cloudflare-worker"],
+    "@usevoiceai/example-worker": ["@usevoiceai/example-worker@workspace:examples/cloudflare-worker"],
 
-    "@usevoice/react": ["@usevoice/react@workspace:packages/react"],
+    "@usevoiceai/react": ["@usevoiceai/react@workspace:packages/react"],
 
-    "@usevoice/server": ["@usevoice/server@workspace:packages/server"],
+    "@usevoiceai/server": ["@usevoiceai/server@workspace:packages/server"],
 
-    "@usevoice/vue": ["@usevoice/vue@workspace:packages/vue"],
+    "@usevoiceai/vue": ["@usevoiceai/vue@workspace:packages/vue"],
 
     "@vercel/oidc": ["@vercel/oidc@3.0.3", "", {}, "sha512-yNEQvPcVrK9sIe637+I0jD6leluPxzwJKx/Haw6F4H77CdDsszUn5V3o96LPziXkSNE2B83+Z3mjqGKBK/R6Gg=="],
 
@@ -1068,9 +1068,9 @@
 
     "@deepgram/sdk/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
 
-    "@usevoice/example-react/react": ["react@19.2.0", "", {}, "sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ=="],
+    "@usevoiceai/example-react/react": ["react@19.2.0", "", {}, "sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ=="],
 
-    "@usevoice/example-react/react-dom": ["react-dom@19.2.0", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.0" } }, "sha512-UlbRu4cAiGaIewkPyiRGJk0imDN2T3JjieT6spoL2UeSf5od4n5LB/mQ4ejmxhCFT1tYe8IvaFulzynWovsEFQ=="],
+    "@usevoiceai/example-react/react-dom": ["react-dom@19.2.0", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.0" } }, "sha512-UlbRu4cAiGaIewkPyiRGJk0imDN2T3JjieT6spoL2UeSf5od4n5LB/mQ4ejmxhCFT1tYe8IvaFulzynWovsEFQ=="],
 
     "@vue/compiler-core/entities": ["entities@4.5.0", "", {}, "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="],
 
@@ -1134,7 +1134,7 @@
 
     "@deepgram/sdk/@types/node/undici-types": ["undici-types@5.26.5", "", {}, "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="],
 
-    "@usevoice/example-react/react-dom/scheduler": ["scheduler@0.27.0", "", {}, "sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q=="],
+    "@usevoiceai/example-react/react-dom/scheduler": ["scheduler@0.27.0", "", {}, "sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q=="],
 
     "node-fetch/whatwg-url/tr46": ["tr46@0.0.3", "", {}, "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="],
 

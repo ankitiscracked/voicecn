@@ -1,12 +1,12 @@
-import { VoiceRecorderController } from "../recorder/voiceRecorderController";
+import { VoiceRecorder } from "../recorder/voiceRecorder";
 import { VoiceSocketClient } from "../socket/voiceSocketClient";
-import { VoiceCommandStateStore } from "../state/voiceCommandState";
+import { VoiceInputStore } from "../state/voiceInputStore";
 import { VoiceAudioStream } from "../audio/voiceAudioStream";
 import type { VoiceCommandResult, VoiceSocketEvent } from "../types";
 
 export interface VoiceCommandControllerOptions {
   socket: VoiceSocketClient;
-  store?: VoiceCommandStateStore;
+  store?: VoiceInputStore;
   notifications?: {
     success?: (message: string) => void;
     error?: (message: string) => void;
@@ -21,21 +21,21 @@ const INTENT_SUCCESS_MESSAGES: Record<string, string> = {
   delete: "Voice command deleted successfully!",
 };
 
-export class VoiceCommandController {
-  private recorder: VoiceRecorderController;
+export class VoiceInputController {
+  private recorder: VoiceRecorder;
   private unsubSocket: (() => void) | null = null;
   private queryResponse: VoiceCommandResult | null = null;
   private audioStream: VoiceAudioStream | null = null;
   private latestTranscript = "";
-  private store: VoiceCommandStateStore;
+  private store: VoiceInputStore;
 
   constructor(private options: VoiceCommandControllerOptions) {
     if (options.store) {
       this.store = options.store;
     } else {
-      this.store = new VoiceCommandStateStore();
+      this.store = new VoiceInputStore();
     }
-    this.recorder = new VoiceRecorderController({
+    this.recorder = new VoiceRecorder({
       sendBinary: (chunk) => this.options.socket.sendBinary(chunk),
       sendJson: (payload) => this.options.socket.sendJson(payload),
       onSocketReady: () => this.handleSocketReady(),

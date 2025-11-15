@@ -5,7 +5,7 @@ import {
   VoiceCommandStateStore,
   VoiceSocketClient,
   type VoiceSocketClientOptions
-} from "@usevoice/core";
+} from "@usevoiceai/core";
 
 interface VoiceCommandBridgeOptions {
   socket?: VoiceSocketClient;

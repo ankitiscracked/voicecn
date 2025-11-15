@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useVoiceCommand } from "./useVoiceCommand";
-import { VoiceCommandStateStore } from "@usevoice/core";
+import { useVoice } from "./useVoice";
+import { VoiceInputStore } from "@usevoiceai/core";
 
 class MockSocket {
   listeners = new Set<(event: any) => void>();
@@ -16,13 +16,13 @@ class MockSocket {
   }
 }
 
-describe("@usevoice/react useVoiceCommand", () => {
+describe("@usevoiceai/react useVoiceCommand", () => {
   it("subscribes to state updates", async () => {
-    const store = new VoiceCommandStateStore();
+    const store = new VoiceInputStore();
     const socket = new MockSocket();
 
     const { result } = renderHook(() =>
-      useVoiceCommand({ state: store, socket: socket as any })
+      useVoice({ state: store, socket: socket as any })
     );
 
     expect(result.current.status.stage).toBe("idle");
@@ -35,18 +35,18 @@ describe("@usevoice/react useVoiceCommand", () => {
   });
 
   it("updates transcript from socket events", async () => {
-    const store = new VoiceCommandStateStore();
+    const store = new VoiceInputStore();
     const socket = new MockSocket();
 
     const { result } = renderHook(() =>
-      useVoiceCommand({ state: store, socket: socket as any })
+      useVoice({ state: store, socket: socket as any })
     );
 
     await act(async () => {
       socket.listeners.forEach((listener) =>
         listener({
           type: "transcript.partial",
-          data: { transcript: "streaming" }
+          data: { transcript: "streaming" },
         })
       );
     });

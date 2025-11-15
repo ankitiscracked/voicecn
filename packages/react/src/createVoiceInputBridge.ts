@@ -1,15 +1,15 @@
 import {
-  VoiceCommandController,
+  VoiceInputController,
   VoiceCommandResult,
-  VoiceCommandStateStore,
+  VoiceInputStore,
   VoiceSocketClient,
   type VoiceSocketClientOptions,
-} from "@usevoice/core";
+} from "@usevoiceai/core";
 
 interface VoiceCommandBridgeOptions {
   socket?: VoiceSocketClient;
   socketOptions?: VoiceSocketClientOptions;
-  state?: VoiceCommandStateStore;
+  state?: VoiceInputStore;
   mediaDevices?: MediaDevices;
   notifications?: {
     success?: (message: string) => void;
@@ -19,8 +19,8 @@ interface VoiceCommandBridgeOptions {
 
 interface VoiceCommandBridge {
   init(): void;
-  store: VoiceCommandStateStore;
-  controller: VoiceCommandController;
+  store: VoiceInputStore;
+  controller: VoiceInputController;
   socket: VoiceSocketClient;
   getQueryResponse(): VoiceCommandResult | null;
   subscribeQueryResponse(
@@ -29,15 +29,15 @@ interface VoiceCommandBridge {
   destroy(): void;
 }
 
-export function createVoiceCommandBridge(
+export function createVoiceInputBridge(
   options: VoiceCommandBridgeOptions = {}
 ): VoiceCommandBridge {
-  const store = options.state ?? new VoiceCommandStateStore();
+  const store = options.state ?? new VoiceInputStore();
   const socket =
     options.socket ??
     new VoiceSocketClient({ ...(options.socketOptions ?? {}) });
 
-  const controller = new VoiceCommandController({
+  const controller = new VoiceInputController({
     socket,
     store,
     notifications: options.notifications,

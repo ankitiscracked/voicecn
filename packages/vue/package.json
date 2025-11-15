@@ -1,5 +1,5 @@
 {
-  "name": "@usevoice/vue",
+  "name": "@usevoiceai/vue",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -8,7 +8,7 @@
     "vue": "^3.4.0"
   },
   "dependencies": {
-    "@usevoice/core": "workspace:*"
+    "@usevoiceai/core": "workspace:*"
   },
   "exports": {
     ".": {

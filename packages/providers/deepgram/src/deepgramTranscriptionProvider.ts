@@ -2,7 +2,7 @@ import { DeepgramClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import type {
   TranscriptionProvider,
   TranscriptionStream,
-} from "@usevoice/server";
+} from "@usevoiceai/server";
 
 const DeepgramEvents = {
   Open: LiveTranscriptionEvents.Open,

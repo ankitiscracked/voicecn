@@ -17,10 +17,10 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@usevoice/core": ["packages/core/src"],
-      "@usevoice/react": ["packages/react/src"],
-      "@usevoice/vue": ["packages/vue/src"],
-      "@usevoice/server": ["packages/server/src"]
+      "@usevoiceai/core": ["packages/core/src"],
+      "@usevoiceai/react": ["packages/react/src"],
+      "@usevoiceai/vue": ["packages/vue/src"],
+      "@usevoiceai/server": ["packages/server/src"]
     }
   },
   "include": [

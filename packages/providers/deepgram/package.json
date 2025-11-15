@@ -1,5 +1,5 @@
 {
-  "name": "@usevoice/deepgram",
+  "name": "@usevoiceai/deepgram",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@usevoice/server": "workspace:*"
+    "@usevoiceai/server": "workspace:*"
   },
   "peerDependencies": {
     "@deepgram/sdk": "^3.3.0"

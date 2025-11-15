@@ -4,20 +4,20 @@ description: Stream raw PCM audio from Cartesia and forward it directly to the c
 icon: Volume2
 ---
 
-`@usevoice/cartesia` exposes a `CartesiaTtsStreamer` that converts agent responses into PCM16 audio.
+`@usevoiceai/cartesia` exposes a `CartesiaTtsStreamer` that converts agent responses into PCM16 audio.
 It uses Cartesia's SSE API so you receive audio chunks as soon as they are synthesized, keeping the
 client conversation snappy.
 
 ## Installation
 
 ```bash
-bun add @usevoice/cartesia @cartesia/cartesia-js
+bun add @usevoiceai/cartesia @cartesia/cartesia-js
 ```
 
 ## Usage
 
 ```ts
-import { CartesiaTtsStreamer } from '@usevoice/cartesia';
+import { CartesiaTtsStreamer } from '@usevoiceai/cartesia';
 
 const ttsStreamer = new CartesiaTtsStreamer({
   apiKey: env.CARTESIA_API_KEY,

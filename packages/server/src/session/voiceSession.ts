@@ -5,7 +5,7 @@ import type {
   SpeechProvider,
   VoiceSessionOptions,
 } from "../types";
-import type { VoiceSocketEvent } from "@usevoice/core";
+import type { VoiceSocketEvent } from "@usevoiceai/core";
 
 type ClientPayload =
   | { type: "start"; timezone?: string; audio?: AudioConfig }
@@ -28,7 +28,7 @@ type ActiveCommand = {
 
 const FIVE_MINUTES_IN_MS = 5 * 60 * 1000;
 
-export class VoiceSessionManager {
+export class VoiceSession {
   private transcriptionProvider: TranscriptionProvider;
   private agentProcessor: AgentProcessor;
   private speechProvider: SpeechProvider;

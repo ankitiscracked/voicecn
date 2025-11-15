@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { VoiceSessionManager } from "./voiceSessionManager";
+import { VoiceSession } from "./voiceSession";
 import {
   MockAgentProcessor,
+  MockSpeechProvider,
   MockTranscriptionProvider,
-  MockTtsStreamer
-} from "../providers";
+} from "../mockProviders";
 
 describe("VoiceSessionManager", () => {
   it("processes transcript and sends events", async () => {
@@ -12,22 +12,22 @@ describe("VoiceSessionManager", () => {
     const sendBinary = vi.fn();
     const closeSocket = vi.fn();
 
-    const session = new VoiceSessionManager({
+    const session = new VoiceSession({
       userId: "user-1",
       transcriptionProvider: new MockTranscriptionProvider({
-        transcript: "hello world"
+        transcript: "hello world",
       }),
       agentProcessor: new MockAgentProcessor({ responsePrefix: "result" }),
-      ttsStreamer: new MockTtsStreamer(),
+      speechProvider: new MockSpeechProvider(),
       sendJson,
       sendBinary,
-      closeSocket
+      closeSocket,
     });
 
     session.handleOpen();
     await session.handleMessage(
       JSON.stringify({
-        type: "start"
+        type: "start",
       })
     );
     await session.handleMessage(JSON.stringify({ type: "end" }));

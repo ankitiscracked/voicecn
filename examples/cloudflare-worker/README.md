@@ -2,8 +2,8 @@
 
 This worker shows how to wire the shared useVoice `VoiceSessionManager` into the Cloudflare Durable Object adapter while using the provider packages:
 
-- `@usevoice/deepgram` for speech-to-text (requires `@deepgram/sdk`)
-- `@usevoice/cartesia` for text-to-speech streaming (requires `@cartesia/cartesia-js`)
+- `@usevoiceai/deepgram` for speech-to-text (requires `@deepgram/sdk`)
+- `@usevoiceai/cartesia` for text-to-speech streaming (requires `@cartesia/cartesia-js`)
 
 ## Prerequisites
 

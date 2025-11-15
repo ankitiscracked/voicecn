@@ -1,4 +1,4 @@
-import type { TranscriptionProvider } from "@usevoice/server";
+import type { TranscriptionProvider } from "@usevoiceai/server";
 import {
   DeepgramTranscriptionProvider,
   type DeepgramProviderConfig,

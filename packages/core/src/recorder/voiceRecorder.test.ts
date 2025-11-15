@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { VoiceRecorderController } from "./voiceRecorderController";
+import { VoiceRecorder } from "./voiceRecorder";
 
 class FakeMediaStream extends EventTarget implements MediaStream {
   id = "stream";
@@ -126,15 +126,15 @@ describe("VoiceRecorderController", () => {
     const sendBinary = vi.fn();
     const sendJson = vi.fn();
 
-    const controller = new VoiceRecorderController({
+    const controller = new VoiceRecorder({
       mediaDevices: {
-        getUserMedia: vi.fn(async () => new FakeMediaStream())
+        getUserMedia: vi.fn(async () => new FakeMediaStream()),
       } as unknown as MediaDevices,
       sendBinary,
       sendJson,
       onSocketReady: vi.fn(),
       onRecordingEnded: vi.fn(),
-      onCancel: vi.fn()
+      onCancel: vi.fn(),
     });
 
     await controller.start();

@@ -1,4 +1,4 @@
-import type { SpeechProvider } from "@usevoice/server";
+import type { SpeechProvider } from "@usevoiceai/server";
 import {
   CartesiaSpeechProvider,
   type CartesiaSpeechConfig,

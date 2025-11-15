@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import { describe, expect, it, vi } from "vitest";
 import { useVoiceCommand } from "./useVoiceCommand";
-import { VoiceCommandStateStore } from "@usevoice/core";
+import { VoiceCommandStateStore } from "@usevoiceai/core";
 
 class MockSocket {
   listeners = new Set<(event: any) => void>();
@@ -17,7 +17,7 @@ class MockSocket {
   }
 }
 
-describe("@usevoice/vue useVoiceCommand", () => {
+describe("@usevoiceai/vue useVoiceCommand", () => {
   it("reacts to store updates", async () => {
     const store = new VoiceCommandStateStore();
     const socket = new MockSocket();

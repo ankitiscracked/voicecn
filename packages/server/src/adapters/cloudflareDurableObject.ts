@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  createVoiceWebSocketSession,
+  createVoiceSession,
   DeclarativeVoiceSessionOptions,
   VoiceSessionProviders,
   type DeclarativeVoiceSession,
@@ -125,7 +125,7 @@ export function createVoiceDurableObject<Env extends CloudflareEnv>(
         agent: providers.agent(this.env),
         speech: providers.speech(this.env),
       };
-      return createVoiceWebSocketSession({
+      return createVoiceSession({
         userId,
         providers: sessionProviders,
         transport: {

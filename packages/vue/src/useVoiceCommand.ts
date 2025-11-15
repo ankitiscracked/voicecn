@@ -4,7 +4,7 @@ import {
   VoiceCommandStateStore,
   type VoiceCommandStatus,
   type VoiceSocketClientOptions
-} from "@usevoice/core";
+} from "@usevoiceai/core";
 import { createVoiceCommandBridge } from "./createVoiceCommandBridge";
 
 export interface UseVoiceCommandOptions {

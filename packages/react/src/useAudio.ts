@@ -3,12 +3,14 @@ import { useEffect, useMemo } from "react";
 const AudioContextClass: typeof AudioContext | undefined =
   typeof window !== "undefined"
     ? window.AudioContext ||
-      (window as typeof window & {
-        webkitAudioContext?: typeof AudioContext;
-      }).webkitAudioContext
+      (
+        window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext
     : undefined;
 
-export interface TtsPlayer {
+export interface AudioPlayer {
   start: () => Promise<void>;
   addChunk: (chunk: ArrayBuffer) => Promise<number | null>;
   finish: (errored?: boolean) => void;
@@ -18,13 +20,13 @@ export interface TtsPlayer {
   getAnalyser: () => Promise<AnalyserNode | null>;
 }
 
-export function useTtsPlayer(): TtsPlayer {
+export function useAudio(): AudioPlayer {
   const player = useMemo(() => createTtsPlayer(), []);
   useEffect(() => () => player.reset(), [player]);
   return player;
 }
 
-function createTtsPlayer(): TtsPlayer {
+function createTtsPlayer(): AudioPlayer {
   let audioContext: AudioContext | null = null;
   const activeSources = new Set<AudioBufferSourceNode>();
   let playbackCursor = 0;
@@ -211,7 +213,7 @@ function createTtsPlayer(): TtsPlayer {
     reset,
     waitUntilIdle,
     getAudioContext: () => audioContext,
-    getAnalyser: ensureAnalyser
+    getAnalyser: ensureAnalyser,
   };
 }
 
@@ -261,6 +263,6 @@ function createBufferFromPcm16(
   return {
     buffer: audioBuffer,
     lastSample,
-    averageMagnitude
+    averageMagnitude,
   };
 }

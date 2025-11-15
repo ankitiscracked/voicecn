@@ -2,7 +2,7 @@ import type { RecorderOptions } from "../types";
 
 const DEFAULT_CHUNK_MS = 400;
 
-export class VoiceRecorderController {
+export class VoiceRecorder {
   private mediaRecorder: MediaRecorder | null = null;
   private mediaStream: MediaStream | null = null;
   private visualizationStream: MediaStream | null = null;
@@ -26,8 +26,7 @@ export class VoiceRecorderController {
 
     await this.options.onSocketReady();
 
-    const mediaDevices =
-      this.options.mediaDevices ?? navigator?.mediaDevices;
+    const mediaDevices = this.options.mediaDevices ?? navigator?.mediaDevices;
     if (!mediaDevices?.getUserMedia) {
       throw new Error("MediaDevices API is not available");
     }
@@ -36,8 +35,8 @@ export class VoiceRecorderController {
       audio: {
         channelCount: 1,
         echoCancellation: true,
-        noiseSuppression: true
-      }
+        noiseSuppression: true,
+      },
     });
 
     const timezone =
@@ -47,11 +46,11 @@ export class VoiceRecorderController {
 
     await this.options.sendJson({
       type: "start",
-      timezone
+      timezone,
     });
 
     this.mediaRecorder = new MediaRecorder(this.mediaStream, {
-      mimeType: "audio/webm;codecs=opus"
+      mimeType: "audio/webm;codecs=opus",
     });
     this.visualizationStream = this.mediaStream;
 

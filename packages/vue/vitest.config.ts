@@ -9,7 +9,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@usevoice/core": path.resolve(__dirname, "../core/src")
+      "@usevoiceai/core": path.resolve(__dirname, "../core/src")
     }
   }
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@usevoice/react",
+  "name": "@usevoiceai/react",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -8,7 +8,7 @@
     "react": "^18.3.0"
   },
   "dependencies": {
-    "@usevoice/core": "workspace:*"
+    "@usevoiceai/core": "workspace:*"
   },
   "exports": {
     ".": {

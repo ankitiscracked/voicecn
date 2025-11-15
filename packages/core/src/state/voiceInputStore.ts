@@ -13,7 +13,7 @@ interface StateEvents {
   audioStream: VoiceAudioStream | null;
 }
 
-export class VoiceCommandStateStore {
+export class VoiceInputStore {
   private status: VoiceCommandStatus = { stage: "idle" };
   private results: VoiceCommandResult[] = [];
   private audioStream: VoiceAudioStream | null = null;

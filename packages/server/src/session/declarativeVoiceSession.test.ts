@@ -5,8 +5,8 @@ import type {
   TranscriptionStream,
   SpeechProvider,
 } from "../types";
-import type { VoiceSocketEvent } from "@usevoice/core";
-import { createVoiceWebSocketSession } from "./declarativeVoiceSession";
+import type { VoiceSocketEvent } from "@usevoiceai/core";
+import { createVoiceSession } from "./declarativeVoiceSession";
 
 class ControlledTranscriptionProvider implements TranscriptionProvider {
   private listeners: {
@@ -79,7 +79,7 @@ describe("createVoiceWebSocketSession", () => {
     const sentEvents: VoiceSocketEvent[] = [];
     const binaryChunks: ArrayBuffer[] = [];
 
-    const session = createVoiceWebSocketSession({
+    const session = createVoiceSession({
       userId: "user-1",
       transcription,
       agent,
@@ -148,7 +148,7 @@ describe("createVoiceWebSocketSession", () => {
       process: vi.fn(),
     };
 
-    const session = createVoiceWebSocketSession({
+    const session = createVoiceSession({
       userId: "user-2",
       transcription,
       agent,

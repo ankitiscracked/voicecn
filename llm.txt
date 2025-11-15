@@ -1,0 +1,43 @@
+Goal: Pull the React demo and Cloudflare Worker under `examples/` and run both so they talk to each other.
+
+1. Environment prerequisites
+   - Ensure Bun `1.1.26` or newer is installed (`bun -v`).
+   - Install the Cloudflare Wrangler CLI and log in once (`npm i -g wrangler && wrangler login`).
+   - Have valid API keys for Deepgram (`DEEPGRAM_API_KEY`) and Cartesia (`CARTESIA_API_KEY`, `CARTESIA_VOICE_ID`) to satisfy the worker secrets.
+
+2. Sync the repo and install workspace deps
+   - `cd /Users/aaa/voicecn`
+   - `git pull` (or `git fetch` + `git checkout <branch>`) so local files match the latest instructions.
+   - `bun install` at the repo root so the shared workspaces (packages + examples) have their dependencies installed.
+
+3. Prepare + run the Cloudflare Worker backend
+   - `cd examples/cloudflare-worker`
+   - (Only if you skipped the root install) `bun install`
+   - Configure the required secrets (one-time per machine):
+     ```
+     wrangler secret put DEEPGRAM_API_KEY
+     wrangler secret put CARTESIA_API_KEY
+     wrangler secret put CARTESIA_VOICE_ID
+     ```
+     The prompts will ask for each key’s value; paste and hit enter.
+   - Start the worker locally: `bun run dev`
+     - Wrangler will expose the Durable Object-backed websocket at `ws://127.0.0.1:8787/voice-command/ws`.
+     - Keep this terminal running; the React demo will connect with a `userId` query string (e.g. `?userId=demo`).
+
+4. Prepare + run the React demo frontend
+   - Open a second terminal and `cd /Users/aaa/voicecn/examples/react-demo`
+   - (Only if you skipped the root install) `bun install`
+   - Create `.env.local` so Vite knows where the worker websocket lives:
+     ```
+     VITE_USEVOICE_WS_URL=ws://127.0.0.1:8787/voice-command/ws?userId=demo
+     # Optional: set to 1 to force the built-in mock socket instead of the worker.
+     VITE_USEVOICE_USE_MOCK=0
+     ```
+   - Launch the Vite dev server: `bun run dev`
+     - Vite will print a `http://localhost:5173` address—open it in a browser with a mic.
+     - When the worker dev server is running, clicking “Start recording” should stream audio to the worker, receive transcripts, and play Cartesia TTS back.
+
+5. Verification / common tweaks
+   - If you only need the UI without a backend, set `VITE_USEVOICE_USE_MOCK=1` and restart `bun run dev` to use the local mock socket in `src/mockServerSocket.ts`.
+   - For deployment testing of the worker, run `bun run deploy` from `examples/cloudflare-worker` (requires proper Cloudflare account access).
+   - To stop either process, `Ctrl+C` the respective terminal.

@@ -1,4 +1,4 @@
-import { VoiceSessionManager } from "../session/voiceSessionManager";
+import { VoiceSession } from "../session/voiceSession";
 import type {
   AgentProcessor,
   TranscriptionProvider,
@@ -32,7 +32,7 @@ export function attachNodeWebSocketSession({
   agentProcessor,
   speechProvider,
 }: NodeWebSocketAdapterOptions) {
-  const manager = new VoiceSessionManager({
+  const manager = new VoiceSession({
     userId,
     transcriptionProvider,
     agentProcessor,

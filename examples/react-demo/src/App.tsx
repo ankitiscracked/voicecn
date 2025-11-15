@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useVoiceCommand, useTtsPlayer } from "@usevoice/react";
+import { useVoice, useAudio } from "@usevoiceai/react";
 import { DemoWebSocket } from "./mockServerSocket";
 
-const wsUrl = import.meta.env.VITE_USEVOICE_WS_URL;
-const forceMock = import.meta.env.VITE_USEVOICE_USE_MOCK === "1";
+const wsUrl = import.meta.env.VITE_USEVOICEAI_WS_URL;
+const forceMock = import.meta.env.VITE_USEVOICEAI_USE_MOCK === "1";
 const useMockSocket = forceMock || !wsUrl;
 
 export default function App() {
   const [autoDemo, setAutoDemo] = useState(false);
-  const [playbackLevel, setPlaybackLevel] = useState(0);
-  const ttsPlayer = useTtsPlayer();
+  const audio = useAudio();
 
   const socketOptions = useMemo(() => {
     if (useMockSocket) {
@@ -31,13 +30,12 @@ export default function App() {
     results,
     audioStream,
     isAudioPlaying,
-  } = useVoiceCommand({
+  } = useVoice({
     socketOptions,
   });
 
   useEffect(() => {
     if (!audioStream) {
-      setPlaybackLevel(0);
       return;
     }
     let isCancelled = false;
@@ -54,25 +52,23 @@ export default function App() {
 
     (async () => {
       try {
-        await ttsPlayer.start();
+        await audio.start();
         while (!isCancelled) {
           const { value, done } = await iterator.next();
           if (done || !value) {
             break;
           }
-          const magnitude = await ttsPlayer.addChunk(value);
+          const magnitude = await audio.addChunk(value);
           if (typeof magnitude === "number") {
-            setPlaybackLevel(magnitude);
           }
         }
-        ttsPlayer.finish();
-        await ttsPlayer.waitUntilIdle();
+        audio.finish();
+        await audio.waitUntilIdle();
         if (!isCancelled) {
-          setPlaybackLevel(0);
         }
       } catch (error) {
         console.warn("Unable to play TTS audio", error);
-        ttsPlayer.finish(true);
+        audio.finish(true);
       } finally {
         releaseStream();
       }
@@ -82,10 +78,9 @@ export default function App() {
       isCancelled = true;
       iterator.return?.();
       releaseStream();
-      ttsPlayer.reset();
-      setPlaybackLevel(0);
+      audio.reset();
     };
-  }, [audioStream, ttsPlayer]);
+  }, [audioStream, audio]);
 
   const handleToggle = async () => {
     if (status.stage === "recording") {
@@ -107,7 +102,6 @@ export default function App() {
   };
 
   const latestResult = results.length > 0 ? results[results.length - 1] : null;
-  const finalTranscript = latestResult?.data?.transcript;
 
   // Determine which animation to show
   const isRecording = status.stage === "recording";

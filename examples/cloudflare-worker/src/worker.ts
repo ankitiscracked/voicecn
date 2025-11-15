@@ -1,8 +1,8 @@
-import { deepgram } from "@usevoice/deepgram";
-import { cartesia } from "@usevoice/cartesia";
-import { AgentProcessor, createVoiceDurableObject } from "@usevoice/server";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { cartesia } from "@usevoiceai/cartesia";
+import { deepgram } from "@usevoiceai/deepgram";
+import { AgentProcessor, createVoiceDurableObject } from "@usevoiceai/server";
 import { generateText } from "ai";
-import { createGoogleGenerativeAI, google } from "@ai-sdk/google";
 
 interface Env {
   VOICE_SESSION: DurableObjectNamespace;

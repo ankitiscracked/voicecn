@@ -1,5 +1,5 @@
 {
-  "name": "@usevoice/example-react",
+  "name": "@usevoiceai/example-react",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   "dependencies": {
     "@types/react": "^19.2.4",
     "@types/react-dom": "^19.2.3",
-    "@usevoice/react": "workspace:*",
+    "@usevoiceai/react": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

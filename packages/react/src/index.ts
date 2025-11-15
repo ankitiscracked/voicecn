@@ -1,2 +1,2 @@
-export * from "./useVoiceCommand";
-export * from "./useTtsPlayer";
+export * from "./useVoice";
+export * from "./useAudio";

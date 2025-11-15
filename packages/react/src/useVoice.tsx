@@ -5,9 +5,9 @@ import {
   type VoiceCommandStatus,
   type VoiceAudioStream,
   VoiceSocketClient,
-  VoiceCommandStateStore,
-} from "@usevoice/core";
-import { createVoiceCommandBridge } from "./createVoiceCommandBridge";
+  VoiceInputStore,
+} from "@usevoiceai/core";
+import { createVoiceInputBridge } from "./createVoiceInputBridge";
 
 export interface UseVoiceCommandOptions {
   socket?: VoiceSocketClient;
@@ -17,7 +17,7 @@ export interface UseVoiceCommandOptions {
     success?: (message: string) => void;
     error?: (message: string) => void;
   };
-  state?: VoiceCommandStateStore;
+  state?: VoiceInputStore;
 }
 
 export interface UseVoiceCommandResult {
@@ -32,13 +32,13 @@ export interface UseVoiceCommandResult {
   recorderStream: MediaStream | null;
 }
 
-export function useVoiceCommand(
+export function useVoice(
   options: UseVoiceCommandOptions = {}
 ): UseVoiceCommandResult {
   // Keep useMemo for bridge since it has side effects and manages subscriptions
   const bridge = useMemo(
     () =>
-      createVoiceCommandBridge({
+      createVoiceInputBridge({
         socket: options.socket,
         socketOptions: options.socketOptions,
         state: options.state,

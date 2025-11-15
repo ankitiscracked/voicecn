@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { VoiceCommandStateStore } from "./voiceCommandState";
+import { VoiceInputStore } from "./voiceInputStore";
 import { VoiceAudioStream } from "../audio/voiceAudioStream";
 
 describe("VoiceCommandStateStore", () => {
   it("updates status and notifies subscribers", () => {
-    const store = new VoiceCommandStateStore();
+    const store = new VoiceInputStore();
     const handler = vi.fn();
     store.subscribe(handler);
 
@@ -14,7 +14,7 @@ describe("VoiceCommandStateStore", () => {
   });
 
   it("pushes results in LIFO order", () => {
-    const store = new VoiceCommandStateStore();
+    const store = new VoiceInputStore();
     const resultsHandler = vi.fn();
     store.subscribeResults(resultsHandler);
 
@@ -26,7 +26,7 @@ describe("VoiceCommandStateStore", () => {
   });
 
   it("notifies playback listeners", () => {
-    const store = new VoiceCommandStateStore();
+    const store = new VoiceInputStore();
     const playbackHandler = vi.fn();
     store.subscribePlayback(playbackHandler);
     store.setAudioPlayback(true);
@@ -34,14 +34,14 @@ describe("VoiceCommandStateStore", () => {
   });
 
   it("tracks audio streams", () => {
-    const store = new VoiceCommandStateStore();
+    const store = new VoiceInputStore();
     const handler = vi.fn();
     store.subscribeAudioStream(handler);
     const stream = new VoiceAudioStream({
       encoding: "linear16",
       sampleRate: 48_000,
       channels: 1,
-      mimeType: "audio/raw"
+      mimeType: "audio/raw",
     });
     store.setAudioStream(stream);
     expect(store.getAudioStream()).toBe(stream);

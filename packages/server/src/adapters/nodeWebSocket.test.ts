@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { attachNodeWebSocketSession } from "./nodeWebSocket";
-import { MockAgentProcessor, MockTranscriptionProvider } from "../providers";
-import { MockSpeechProvider } from "../providers/speech/mockSpeechProvider";
+import {
+  MockAgentProcessor,
+  MockTranscriptionProvider,
+} from "../mockProviders";
+import { MockSpeechProvider } from "../mockProviders/speech/mockSpeechProvider";
 
 class FakeWebSocket {
   readyState = 1;

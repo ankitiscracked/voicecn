@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { VoiceCommandController } from "./voiceCommandController";
+import { VoiceInputController } from "./voiceInputController";
 import { VoiceSocketClient } from "../socket/voiceSocketClient";
-import { VoiceCommandStateStore } from "../state/voiceCommandState";
+import { VoiceInputStore } from "../state/voiceInputStore";
 
 class MockSocket implements Partial<VoiceSocketClient> {
   listeners = new Set<(event: any) => void>();
@@ -20,47 +20,47 @@ class MockSocket implements Partial<VoiceSocketClient> {
   }
 }
 
-describe("VoiceCommandController", () => {
+describe("VoiceInputController", () => {
   it("updates state when receiving complete events", async () => {
     const socket = new MockSocket();
-    const state = new VoiceCommandStateStore();
-    const controller = new VoiceCommandController({
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
       socket: socket as unknown as VoiceSocketClient,
-      state
+      store,
     });
 
     socket.emit({
       type: "transcript.final",
-      data: { transcript: "hello world" }
+      data: { transcript: "hello world" },
     });
 
-    expect(state.getStatus().transcript).toBe("hello world");
+    expect(store.getStatus().transcript).toBe("hello world");
 
     socket.emit({
       type: "complete",
-      data: { intent: "fetch", formattedContent: { foo: "bar" } }
+      data: { intent: "fetch", formattedContent: { foo: "bar" } },
     });
 
-    expect(state.getResults()).toHaveLength(1);
-    expect(state.getResults()[0].data?.intent).toBe("fetch");
+    expect(store.getResults()).toHaveLength(1);
+    expect(store.getResults()[0].data?.intent).toBe("fetch");
 
     controller.destroy();
   });
 
   it("creates audio streams for tts events", async () => {
     const socket = new MockSocket();
-    const state = new VoiceCommandStateStore();
-    const controller = new VoiceCommandController({
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
       socket: socket as unknown as VoiceSocketClient,
-      state
+      store,
     });
 
     socket.emit({
       type: "tts.start",
-      data: { sampleRate: 48_000, encoding: "linear16", channels: 1 }
+      data: { sampleRate: 48_000, encoding: "linear16", channels: 1 },
     });
 
-    const stream = state.getAudioStream();
+    const stream = store.getAudioStream();
     expect(stream).toBeTruthy();
     const iterator = stream![Symbol.asyncIterator]();
 
@@ -81,19 +81,18 @@ describe("VoiceCommandController", () => {
 
   it("tracks partial transcripts", () => {
     const socket = new MockSocket();
-    const state = new VoiceCommandStateStore();
-    const controller = new VoiceCommandController({
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
       socket: socket as unknown as VoiceSocketClient,
-      state
+      store,
     });
 
     socket.emit({
       type: "transcript.partial",
-      data: { transcript: "hello world" }
+      data: { transcript: "hello world" },
     });
 
-    expect(state.getStatus().transcript).toBe("hello world");
-    expect(state.getStatus().realtimeText).toBe("hello world");
+    expect(store.getStatus().transcript).toBe("hello world");
 
     controller.destroy();
   });

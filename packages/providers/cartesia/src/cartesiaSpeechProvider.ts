@@ -1,4 +1,4 @@
-import type { SpeechProvider } from "@usevoice/server";
+import type { SpeechProvider } from "@usevoiceai/server";
 import { CartesiaClient } from "@cartesia/cartesia-js";
 
 const DEFAULT_VOICE_ID = "66c6b81c-ddb7-4892-bdd5-19b5a7be38e7";

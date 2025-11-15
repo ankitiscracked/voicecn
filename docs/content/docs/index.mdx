@@ -47,10 +47,10 @@ with Bun workspaces so every package shares tooling and typechecking.
 
 | Package / Example            | Purpose |
 | ---------------------------- | ------- |
-| `@usevoice/core`              | Recorder + socket controller, async audio streams, and shared state store. |
-| `@usevoice/react` / `@usevoice/vue` | Framework bindings that expose `useVoiceCommand` plus React-only helpers like `useTtsPlayer`. |
-| `@usevoice/server`            | `VoiceSessionManager`, node/Durable Object adapters, and provider contracts. |
-| `@usevoice/deepgram` / `@usevoice/cartesia` | Production provider implementations for Deepgram STT and Cartesia TTS. |
+| `@usevoiceai/core`              | Recorder + socket controller, async audio streams, and shared state store. |
+| `@usevoiceai/react` / `@usevoiceai/vue` | Framework bindings that expose `useVoiceCommand` plus React-only helpers like `useTtsPlayer`. |
+| `@usevoiceai/server`            | `VoiceSessionManager`, node/Durable Object adapters, and provider contracts. |
+| `@usevoiceai/deepgram` / `@usevoiceai/cartesia` | Production provider implementations for Deepgram STT and Cartesia TTS. |
 | `examples/react-demo` / `examples/vue-demo` | Frontend playgrounds that can run against the mock socket or your Cloudflare Worker. |
 | `examples/cloudflare-worker` | Durable Object backend that wires Deepgram + Cartesia into the session manager. |
 
