@@ -1,14 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   createVoiceSession,
-  DeclarativeVoiceSessionOptions,
-  VoiceSessionProviders,
   type DeclarativeVoiceSession,
 } from "../session/declarativeVoiceSession";
 import type {
   AgentProcessor,
-  TranscriptionProvider,
   SpeechProvider,
+  TranscriptionProvider,
 } from "../types";
 
 export interface CloudflareDurableObjectState {
