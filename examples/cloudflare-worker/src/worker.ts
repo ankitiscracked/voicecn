@@ -37,14 +37,17 @@ class MockAgentProcessor implements AgentProcessor {
       await send({
         type: "complete",
         data: {
-          formattedContent: { format: "paragraph", content: response },
+          responseText: response,
         },
       });
     } catch (error) {
       console.error("Error generating text", error);
-      response = `Error: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`;
+      await send({
+        type: "error",
+        data: {
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+      });
     }
   }
 }

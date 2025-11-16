@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
-  VoiceCommandResult,
+  VoiceInputResult,
   type VoiceSocketClientOptions,
   type VoiceCommandStatus,
   type VoiceAudioStream,
@@ -22,8 +22,7 @@ export interface UseVoiceCommandOptions {
 
 export interface UseVoiceCommandResult {
   status: VoiceCommandStatus;
-  results: VoiceCommandResult[];
-  queryResponse: VoiceCommandResult | null;
+  results: VoiceInputResult[];
   audioStream: VoiceAudioStream | null;
   isAudioPlaying: boolean;
   startRecording: () => Promise<void>;
@@ -78,15 +77,6 @@ export function useVoice(
     () => store.isAudioPlaying()
   );
 
-  const [queryResponse, setQueryResponse] = useState<VoiceCommandResult | null>(
-    bridge.getQueryResponse()
-  );
-
-  useEffect(() => {
-    const unsubQuery = bridge.subscribeQueryResponse(setQueryResponse);
-    return () => unsubQuery();
-  }, [bridge]);
-
   useEffect(() => {
     bridge.init();
     return () => bridge.destroy();
@@ -107,7 +97,6 @@ export function useVoice(
   return {
     status,
     results,
-    queryResponse,
     audioStream,
     isAudioPlaying,
     startRecording,

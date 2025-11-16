@@ -1,6 +1,6 @@
 import {
   VoiceInputController,
-  VoiceCommandResult,
+  VoiceInputResult,
   VoiceInputStore,
   VoiceSocketClient,
   type VoiceSocketClientOptions,
@@ -22,10 +22,6 @@ interface VoiceCommandBridge {
   store: VoiceInputStore;
   controller: VoiceInputController;
   socket: VoiceSocketClient;
-  getQueryResponse(): VoiceCommandResult | null;
-  subscribeQueryResponse(
-    handler: (result: VoiceCommandResult | null) => void
-  ): () => void;
   destroy(): void;
 }
 
@@ -44,40 +40,14 @@ export function createVoiceInputBridge(
     mediaDevices: options.mediaDevices,
   });
 
-  let queryResponse: VoiceCommandResult | null =
-    store.getResults().find((item) => item.data?.intent === "fetch") ?? null;
-  const queryHandlers = new Set<(result: VoiceCommandResult | null) => void>();
-
-  const notifyQueryHandlers = () => {
-    queryHandlers.forEach((handler) => handler(queryResponse));
-  };
-
-  const unsubscribeResults = store.subscribeResults((next) => {
-    const latest = next.find((item) => item.data?.intent === "fetch") ?? null;
-    if (latest !== queryResponse) {
-      queryResponse = latest;
-      notifyQueryHandlers();
-    }
-  });
-
   return {
     store,
     controller,
     socket,
-    getQueryResponse: () => queryResponse,
-    subscribeQueryResponse(handler) {
-      queryHandlers.add(handler);
-      handler(queryResponse);
-      return () => {
-        queryHandlers.delete(handler);
-      };
-    },
     init() {
       controller.init();
     },
     destroy() {
-      unsubscribeResults();
-      queryHandlers.clear();
       controller.destroy();
       if (!options.socket) {
         socket.close();

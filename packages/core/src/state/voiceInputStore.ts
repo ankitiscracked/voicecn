@@ -1,5 +1,5 @@
 import type {
-  VoiceCommandResult,
+  VoiceInputResult,
   VoiceCommandStage,
   VoiceCommandStatus,
 } from "../types";
@@ -8,14 +8,14 @@ import { SimpleEventEmitter } from "../utils/eventEmitter";
 
 interface StateEvents {
   change: VoiceCommandStatus;
-  results: VoiceCommandResult[];
+  results: VoiceInputResult[];
   playback: boolean;
   audioStream: VoiceAudioStream | null;
 }
 
 export class VoiceInputStore {
   private status: VoiceCommandStatus = { stage: "idle" };
-  private results: VoiceCommandResult[] = [];
+  private results: VoiceInputResult[] = [];
   private audioStream: VoiceAudioStream | null = null;
   private audioPlaying = false;
   private emitter = new SimpleEventEmitter<StateEvents>();
@@ -40,7 +40,7 @@ export class VoiceInputStore {
     return this.emitter.on("change", handler);
   }
 
-  subscribeResults(handler: (results: VoiceCommandResult[]) => void) {
+  subscribeResults(handler: (results: VoiceInputResult[]) => void) {
     return this.emitter.on("results", handler);
   }
 
@@ -67,7 +67,7 @@ export class VoiceInputStore {
     this.emitter.emit("change", this.status);
   }
 
-  pushResult(result: VoiceCommandResult) {
+  pushResult(result: VoiceInputResult) {
     this.results = [result, ...this.results];
     this.emitter.emit("results", this.results);
   }
@@ -89,5 +89,18 @@ export class VoiceInputStore {
   setAudioPlayback(playing: boolean) {
     this.audioPlaying = playing;
     this.emitter.emit("playback", playing);
+  }
+
+  resetButKeepResults() {
+    this.resetStatus();
+    this.clearAudioStream();
+    this.setAudioPlayback(false);
+  }
+
+  reset() {
+    this.resetStatus();
+    this.clearResults();
+    this.clearAudioStream();
+    this.setAudioPlayback(false);
   }
 }

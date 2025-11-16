@@ -1,20 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { useVoice, useAudio } from "@usevoiceai/react";
+import { useAudio, useVoice } from "@usevoiceai/react";
+import { useMemo, useState } from "react";
 import { DemoWebSocket } from "./mockServerSocket";
 
 const wsUrl = import.meta.env.VITE_USEVOICEAI_WS_URL;
-const forceMock = import.meta.env.VITE_USEVOICEAI_USE_MOCK === "1";
+const forceMock =
+  import.meta.env.VITE_USEVOICEAI_USE_MOCK === "1" ||
+  import.meta.env.VITE_USEVOICEAI_USE_MOCK === "true";
 const useMockSocket = forceMock || !wsUrl;
 
 export default function App() {
   const [autoDemo, setAutoDemo] = useState(false);
-  const audio = useAudio();
 
   const socketOptions = useMemo(() => {
     if (useMockSocket) {
       return {
         url: "ws://demo.local",
-        WebSocketImpl: DemoWebSocket,
+        WebSocketImpl: DemoWebSocket as unknown as WebSocket,
       };
     }
 
@@ -34,53 +35,7 @@ export default function App() {
     socketOptions,
   });
 
-  useEffect(() => {
-    if (!audioStream) {
-      return;
-    }
-    let isCancelled = false;
-    const stream = audioStream;
-    const iterator = stream[Symbol.asyncIterator]();
-    let hasReleased = false;
-    const releaseStream = () => {
-      if (hasReleased) {
-        return;
-      }
-      hasReleased = true;
-      stream.release?.();
-    };
-
-    (async () => {
-      try {
-        await audio.start();
-        while (!isCancelled) {
-          const { value, done } = await iterator.next();
-          if (done || !value) {
-            break;
-          }
-          const magnitude = await audio.addChunk(value);
-          if (typeof magnitude === "number") {
-          }
-        }
-        audio.finish();
-        await audio.waitUntilIdle();
-        if (!isCancelled) {
-        }
-      } catch (error) {
-        console.warn("Unable to play TTS audio", error);
-        audio.finish(true);
-      } finally {
-        releaseStream();
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-      iterator.return?.();
-      releaseStream();
-      audio.reset();
-    };
-  }, [audioStream, audio]);
+  const { stop } = useAudio({ audioStream });
 
   const handleToggle = async () => {
     if (status.stage === "recording") {
@@ -101,12 +56,11 @@ export default function App() {
     await startRecording();
   };
 
-  const latestResult = results.length > 0 ? results[results.length - 1] : null;
+  const latestResult = results.length > 0 ? results[0] : null;
 
-  // Determine which animation to show
   const isRecording = status.stage === "recording";
-  const isProcessing =
-    status.stage === "processing" || status.stage === "transcribing";
+  const isProcessing = status.stage === "processing";
+  const isError = status.stage === "error";
   const isPlaying = isAudioPlaying;
 
   return (
@@ -196,7 +150,16 @@ export default function App() {
               Response
             </div>
             <p className="text-gray-900 leading-relaxed overflow-y-auto max-h-60 border border-stone-200 rounded-md p-2">
-              {latestResult.data?.formattedContent?.content as string}
+              {(latestResult.data?.responseText as string) ?? ""}
+            </p>
+          </div>
+        )}
+
+        {isError && (
+          <div className="text-center space-y-2">
+            <div className="font-medium text-stone-500">Error</div>
+            <p className="bg-red-50 p-2 rounded-md text-sm text-red-700 leading-relaxed overflow-y-auto max-h-60">
+              {status.error}
             </p>
           </div>
         )}

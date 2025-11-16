@@ -2,7 +2,24 @@
 
 ### The Typescript toolkit for ambitious voice AI apps
 
-This workspace hosts the useVoice multi-runtime voice AI SDK. It is organized as a Bun workspace so packages can share tooling and be versioned together.
+Build end-to-end voice AI apps in a few lines of code. Speech to text -> Your agent processing code -> Text to speech like it's no big deal. Speaking to your computer is not going to be a pain anymore.
+
+### Tutorial
+
+Let's jump right into it.
+
+### Client usage
+
+Add `useVoice` and `useAudio` hooks to your react component like this. Call `startRecording` to start streaming your voice. As you speak, partial transcripts start arriving in `transcript`. It's reactive so you can update your UI with an incremental transcript view. Once you call `stopRecording`, `status` will update into the processing state. Once it turns into completed state, audioStream is available. You can pass it to the `useAudio` hook to automatically start playing the response audio or use it however you want. It's a plain old readable stream containing raw audio PCM chunks.
+
+```jsx
+export function App() {
+  const { startRecording, stopRecording, transcript, audioStream } = useVoice();
+  const { stop } = useAudio(audioStream);
+}
+```
+
+### Server Usage
 
 ## Packages
 

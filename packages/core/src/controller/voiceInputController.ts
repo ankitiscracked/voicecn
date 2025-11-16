@@ -2,7 +2,7 @@ import { VoiceRecorder } from "../recorder/voiceRecorder";
 import { VoiceSocketClient } from "../socket/voiceSocketClient";
 import { VoiceInputStore } from "../state/voiceInputStore";
 import { VoiceAudioStream } from "../audio/voiceAudioStream";
-import type { VoiceCommandResult, VoiceSocketEvent } from "../types";
+import type { VoiceInputResult, VoiceSocketEvent } from "../types";
 
 export interface VoiceCommandControllerOptions {
   socket: VoiceSocketClient;
@@ -11,22 +11,15 @@ export interface VoiceCommandControllerOptions {
     success?: (message: string) => void;
     error?: (message: string) => void;
   };
-  onQueryResponse?: (response: VoiceCommandResult | null) => void;
+  onVoiceInputResult?: (result: VoiceInputResult | null) => void;
   mediaDevices?: MediaDevices;
 }
-
-const INTENT_SUCCESS_MESSAGES: Record<string, string> = {
-  create: "Voice command saved successfully!",
-  update: "Voice command updated successfully!",
-  delete: "Voice command deleted successfully!",
-};
 
 export class VoiceInputController {
   private recorder: VoiceRecorder;
   private unsubSocket: (() => void) | null = null;
-  private queryResponse: VoiceCommandResult | null = null;
+  private voiceInputResult: VoiceInputResult | null = null;
   private audioStream: VoiceAudioStream | null = null;
-  private latestTranscript = "";
   private store: VoiceInputStore;
 
   constructor(private options: VoiceCommandControllerOptions) {
@@ -56,8 +49,8 @@ export class VoiceInputController {
     });
   }
 
-  getQueryResponse() {
-    return this.queryResponse;
+  getVoiceInputResult() {
+    return this.voiceInputResult;
   }
 
   getRecorderStream() {
@@ -68,14 +61,14 @@ export class VoiceInputController {
     this.store.setStatus({
       stage: "recording",
       startedAt: Date.now(),
-      error: undefined,
-      transcript: undefined,
     });
-    this.latestTranscript = "";
     try {
       await this.recorder.start();
     } catch (error) {
-      this.store.resetStatus();
+      this.store.setStatus({
+        stage: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       throw error;
     }
   }
@@ -91,26 +84,19 @@ export class VoiceInputController {
   destroy() {
     this.unsubSocket?.();
     this.unsubSocket = null;
-    this.store.resetStatus();
     this.closeAudioStream();
-    this.store.setAudioPlayback(false);
-    this.store.setAudioStream(null);
-    this.latestTranscript = "";
+    this.store.resetButKeepResults();
   }
 
   private async handleSocketReady() {
-    this.queryResponse = null;
-    this.latestTranscript = "";
     this.closeAudioStream();
     this.store.setAudioPlayback(false);
-    this.store.setStatus({
-      transcript: undefined,
-    });
+    this.store.setStatus({ transcript: null });
     await this.options.socket.ensureConnection();
   }
 
   private async handleRecordingEnded() {
-    this.store.setStatus({ stage: "transcribing" });
+    this.store.updateStage("processing");
   }
 
   private async handleCancel() {
@@ -118,7 +104,6 @@ export class VoiceInputController {
     this.closeAudioStream();
     this.store.setAudioPlayback(false);
     this.store.setStatus({ transcript: undefined });
-    this.latestTranscript = "";
   }
 
   private async handleSocketEvent(event: VoiceSocketEvent | ArrayBuffer) {
@@ -132,20 +117,10 @@ export class VoiceInputController {
 
     switch (type) {
       case "transcript.partial":
-        if (typeof data?.transcript === "string") {
-          this.store.setStatus({
-            transcript: data.transcript,
-          });
-          this.latestTranscript = data.transcript;
-        }
-        break;
       case "transcript.final":
-        if (typeof data?.transcript === "string") {
-          this.store.setStatus({
-            transcript: data.transcript,
-          });
-          this.latestTranscript = data.transcript;
-        }
+        this.store.setStatus({
+          transcript: data.transcript,
+        });
         break;
       case "tool-message":
         this.store.setStatus({ stage: "processing" });
@@ -154,11 +129,7 @@ export class VoiceInputController {
         await this.handleComplete(data);
         break;
       case "command-cancelled":
-        this.store.resetStatus();
-        this.closeAudioStream();
-        this.store.setAudioPlayback(false);
-        this.store.setStatus({ transcript: undefined });
-        this.latestTranscript = "";
+        this.store.resetButKeepResults();
         break;
       case "tts.start":
         this.closeAudioStream();
@@ -182,22 +153,16 @@ export class VoiceInputController {
         break;
       case "timeout":
         this.options.socket.close();
-        this.store.resetStatus();
-        this.closeAudioStream();
-        this.store.setAudioPlayback(false);
-        this.store.setStatus({ transcript: undefined });
-        this.latestTranscript = "";
+        this.store.resetButKeepResults();
         break;
       case "error":
         this.store.setStatus({
           stage: "error",
           error:
             data?.error ??
-            "Something went wrong while processing the voice command.",
+            "Something went wrong while processing the voice input.",
         });
-        this.closeAudioStream();
-        this.store.setAudioPlayback(false);
-        this.store.setStatus({ transcript: undefined });
+        this.store.setStatus({ transcript: null });
         this.options.notifications?.error?.(
           data?.error ??
             "Something went wrong while processing the voice command."
@@ -208,7 +173,6 @@ export class VoiceInputController {
         this.closeAudioStream();
         this.store.setAudioPlayback(false);
         this.store.setStatus({ transcript: undefined });
-        this.latestTranscript = "";
         break;
     }
   }
@@ -249,31 +213,14 @@ export class VoiceInputController {
 
   private async handleComplete(payload: any) {
     this.store.setStatus({ stage: "completed" });
-    const formattedContent = payload?.formattedContent ?? null;
-    const result: VoiceCommandResult = {
+    const result: VoiceInputResult = {
       timestamp: Date.now(),
-      confidence: 1,
       data: {
-        intent: payload?.intent ?? "fetch",
-        transcript:
-          (payload?.transcript as string | undefined) ?? this.latestTranscript,
-        formattedContent,
-        graphPaths: payload?.graphPaths ?? [],
-        fallbackResults: payload?.fallbackResults ?? [],
-        timestamp: payload?.timestamp ?? Date.now(),
+        responseText: payload?.responseText ?? "",
       },
     };
 
     this.store.pushResult(result);
-
-    if (result.data?.intent === "fetch") {
-      this.queryResponse = result;
-      this.options.onQueryResponse?.(result);
-    } else {
-      const intent = result.data?.intent ?? "operation";
-      const message =
-        INTENT_SUCCESS_MESSAGES[intent] ?? "Operation completed successfully!";
-      this.options.notifications?.success?.(message);
-    }
+    this.options.onVoiceInputResult?.(result);
   }
 }

@@ -196,7 +196,7 @@ export class VoiceSession {
         transcript,
         userId: this.options.userId,
         timezone: this.activeCommand.timezone,
-        send: (event) => this.forwardAgentEvent(event),
+        send: (event: VoiceSocketEvent) => this.forwardAgentEvent(event),
       });
     } catch (error) {
       this.sendError(
@@ -214,8 +214,8 @@ export class VoiceSession {
       return;
     }
 
-    const text = event.data?.formattedContent?.content;
-    if (!text || typeof text !== "string") {
+    const text = event.data?.responseText;
+    if (!text) {
       return;
     }
 

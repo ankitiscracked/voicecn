@@ -1,31 +1,21 @@
 export type VoiceCommandStage =
   | "idle"
   | "recording"
-  | "transcribing"
   | "processing"
   | "completed"
   | "error";
 
 export interface VoiceCommandStatus {
   stage: VoiceCommandStage;
-  transcript?: string;
+  transcript?: string | null;
   error?: string;
   startedAt?: number;
 }
 
-export interface VoiceCommandResult {
+export interface VoiceInputResult {
   timestamp: number;
-  data?: {
-    intent: string;
-    transcript: string;
-    formattedContent?: unknown;
-    graphPaths?: unknown[];
-    fallbackResults?: unknown[];
-    timestamp?: number;
-  };
+  data?: Record<string, unknown> & { responseText?: string };
   error?: string;
-  confidence: number;
-  audioUrl?: string;
 }
 
 export type VoiceSocketEvent =
@@ -34,7 +24,10 @@ export type VoiceSocketEvent =
   | { type: "transcript.partial"; data?: { transcript?: string } }
   | { type: "transcript.final"; data?: { transcript?: string } }
   | { type: "tool-message"; data?: { message?: string } }
-  | { type: "complete"; data?: Record<string, unknown> }
+  | {
+      type: "complete";
+      data?: Record<string, unknown> & { responseText?: string };
+    }
   | { type: "command-cancelled" }
   | { type: "tts.start"; data?: Record<string, unknown> }
   | { type: "tts.end"; data?: { errored?: boolean } }
