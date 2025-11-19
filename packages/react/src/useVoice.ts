@@ -4,6 +4,7 @@ import {
   type VoiceSocketClientOptions,
   type VoiceCommandStatus,
   type VoiceAudioStream,
+  type SpeechEndDetectionConfig,
   VoiceSocketClient,
   VoiceInputStore,
 } from "@usevoiceai/core";
@@ -18,6 +19,7 @@ export interface UseVoiceCommandOptions {
     error?: (message: string) => void;
   };
   state?: VoiceInputStore;
+  speechEndDetection?: SpeechEndDetectionConfig;
 }
 
 export interface UseVoiceCommandResult {
@@ -43,6 +45,7 @@ export function useVoice(
         state: options.state,
         mediaDevices: options.mediaDevices,
         notifications: options.notifications,
+        speechEndDetection: options.speechEndDetection,
       }),
     [
       options.socket,
@@ -51,6 +54,7 @@ export function useVoice(
       options.mediaDevices,
       options.notifications?.success,
       options.notifications?.error,
+      options.speechEndDetection,
     ]
   );
 

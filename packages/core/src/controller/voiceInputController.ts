@@ -2,7 +2,19 @@ import { VoiceRecorder } from "../recorder/voiceRecorder";
 import { VoiceSocketClient } from "../socket/voiceSocketClient";
 import { VoiceInputStore } from "../state/voiceInputStore";
 import { VoiceAudioStream } from "../audio/voiceAudioStream";
-import type { VoiceInputResult, VoiceSocketEvent } from "../types";
+import type {
+  SpeechEndDetectionConfig,
+  SpeechEndDetectionMode,
+  SpeechStartHint,
+  VoiceInputResult,
+  VoiceSocketEvent,
+} from "../types";
+
+type StreamCloseReason = "normal" | "interrupted" | "error" | undefined;
+
+type NormalizedSpeechEndDetectionConfig = SpeechEndDetectionConfig & {
+  mode: SpeechEndDetectionMode;
+};
 
 export interface VoiceCommandControllerOptions {
   socket: VoiceSocketClient;
@@ -13,6 +25,7 @@ export interface VoiceCommandControllerOptions {
   };
   onVoiceInputResult?: (result: VoiceInputResult | null) => void;
   mediaDevices?: MediaDevices;
+  speechEndDetection?: SpeechEndDetectionConfig;
 }
 
 export class VoiceInputController {
@@ -21,6 +34,10 @@ export class VoiceInputController {
   private voiceInputResult: VoiceInputResult | null = null;
   private audioStream: VoiceAudioStream | null = null;
   private store: VoiceInputStore;
+  private speechEndDetection: NormalizedSpeechEndDetectionConfig;
+  private audioReleaseReasons = new Map<string, StreamCloseReason>();
+  private autoRestartTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly autoRestartDelayMs = 200;
 
   constructor(private options: VoiceCommandControllerOptions) {
     if (options.store) {
@@ -28,6 +45,10 @@ export class VoiceInputController {
     } else {
       this.store = new VoiceInputStore();
     }
+    this.speechEndDetection = {
+      ...(options.speechEndDetection ?? {}),
+      mode: options.speechEndDetection?.mode ?? "manual",
+    };
     this.recorder = new VoiceRecorder({
       sendBinary: (chunk) => this.options.socket.sendBinary(chunk),
       sendJson: (payload) => this.options.socket.sendJson(payload),
@@ -35,6 +56,7 @@ export class VoiceInputController {
       onRecordingEnded: () => this.handleRecordingEnded(),
       onCancel: () => this.handleCancel(),
       mediaDevices: this.options.mediaDevices,
+      speechEndDetection: this.speechEndDetection,
     });
 
     this.init();
@@ -76,10 +98,12 @@ export class VoiceInputController {
   }
 
   stopRecording() {
+    this.clearAutoRestartTimer();
     this.recorder.stop();
   }
 
   async cancelRecording() {
+    this.clearAutoRestartTimer();
     await this.recorder.cancel();
   }
 
@@ -88,6 +112,8 @@ export class VoiceInputController {
     this.unsubSocket = null;
     this.closeAudioStream();
     this.store.resetButKeepResults();
+    this.clearAutoRestartTimer();
+    this.audioReleaseReasons.clear();
   }
 
   private async handleSocketReady() {
@@ -146,16 +172,31 @@ export class VoiceInputController {
         this.store.setAudioPlayback(true);
         break;
       case "tts.end":
-        if (data?.errored) {
-          this.closeAudioStream(new Error("tts stream ended with error"));
+        if (data?.errored || data?.interrupted) {
+          const error =
+            data?.errored && !data?.interrupted
+              ? new Error("tts stream ended with error")
+              : new Error("tts stream interrupted");
+          this.closeAudioStream(error, {
+            reason: data?.interrupted ? "interrupted" : "error",
+          });
           this.store.setAudioPlayback(false);
         } else {
-          this.closeAudioStream(undefined, { waitForRelease: true });
+          this.closeAudioStream(undefined, {
+            waitForRelease: true,
+            reason: "normal",
+          });
         }
         break;
       case "timeout":
         this.options.socket.close();
         this.store.resetButKeepResults();
+        break;
+      case "speech-end.hint":
+        this.handleSpeechEndHint();
+        break;
+      case "speech-start.hint":
+        this.handleSpeechStartHint(data);
         break;
       case "error":
         this.store.setStatus({
@@ -181,12 +222,13 @@ export class VoiceInputController {
 
   private closeAudioStream(
     error?: Error,
-    options?: { waitForRelease?: boolean }
+    options?: { waitForRelease?: boolean; reason?: StreamCloseReason }
   ) {
     if (!this.audioStream) {
       return;
     }
     const stream = this.audioStream;
+    this.audioReleaseReasons.set(stream.id, options?.reason);
     if (error) {
       stream.fail(error);
     } else {
@@ -195,6 +237,7 @@ export class VoiceInputController {
     if (!options?.waitForRelease) {
       stream.release();
     }
+
     if (this.audioStream === stream) {
       this.audioStream = null;
     }
@@ -210,6 +253,9 @@ export class VoiceInputController {
       if (this.audioStream && this.audioStream.id === released.id) {
         this.audioStream = null;
       }
+      const reason = this.audioReleaseReasons.get(released.id);
+      this.audioReleaseReasons.delete(released.id);
+      this.handleAudioStreamReleased(reason);
     });
   }
 
@@ -225,5 +271,78 @@ export class VoiceInputController {
     this.store.pushResult(result);
     this.voiceInputResult = result;
     this.options.onVoiceInputResult?.(result);
+  }
+
+  private handleSpeechEndHint() {
+    if (this.speechEndDetection.mode !== "auto") {
+      return;
+    }
+    this.store.updateStage("processing");
+    this.recorder.stopFromServerHint();
+  }
+
+  private handleSpeechStartHint(data?: SpeechStartHint) {
+    if (this.speechEndDetection.mode !== "auto") {
+      return;
+    }
+    this.clearAutoRestartTimer();
+    this.closeAudioStream(new Error("tts interrupted by user"), {
+      reason: "interrupted",
+    });
+    this.store.setAudioPlayback(false);
+    this.store.updateStage("recording");
+    this.triggerAutoRestart("speech-start");
+  }
+
+  private handleAudioStreamReleased(reason?: StreamCloseReason) {
+    if (reason === "normal") {
+      this.triggerAutoRestart("playback-ended");
+      return;
+    }
+    this.clearAutoRestartTimer();
+  }
+
+  private triggerAutoRestart(source: "playback-ended" | "speech-start") {
+    if (this.speechEndDetection.mode !== "auto") {
+      return;
+    }
+    if (this.recorder.recording) {
+      return;
+    }
+
+    const status = this.store.getStatus();
+    if (status.stage === "error") {
+      return;
+    }
+
+    this.clearAutoRestartTimer();
+
+    const attemptStart = () => {
+      this.autoRestartTimer = null;
+      this.startRecording().catch((error) => {
+        console.warn("auto restart failed", error);
+      });
+    };
+
+    if (source === "speech-start") {
+      attemptStart();
+      return;
+    }
+
+    if (typeof setTimeout !== "function") {
+      attemptStart();
+      return;
+    }
+
+    this.autoRestartTimer = setTimeout(() => {
+      attemptStart();
+    }, this.autoRestartDelayMs);
+  }
+
+  private clearAutoRestartTimer() {
+    if (this.autoRestartTimer) {
+      clearTimeout(this.autoRestartTimer);
+      this.autoRestartTimer = null;
+    }
   }
 }

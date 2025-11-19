@@ -1,14 +1,24 @@
 import type {
   AgentProcessor,
+  SpeechEndHint,
+  SpeechProvider,
+  SpeechStartHint,
   TranscriptionProvider,
   TranscriptionStream,
-  SpeechProvider,
   VoiceSessionOptions,
 } from "../types";
-import type { VoiceSocketEvent } from "@usevoiceai/core";
+import type {
+  SpeechEndDetectionConfig,
+  VoiceSocketEvent,
+} from "@usevoiceai/core";
 
 type ClientPayload =
-  | { type: "start"; timezone?: string; audio?: AudioConfig }
+  | {
+      type: "start";
+      timezone?: string;
+      audio?: AudioConfig;
+      speechEndDetection?: SpeechEndDetectionConfig;
+    }
   | { type: "end" }
   | { type: "cancel" }
   | { type: "ping"; timestamp?: number };
@@ -19,14 +29,30 @@ type AudioConfig = {
   channels?: number;
 };
 
+type NormalizedSpeechEndDetectionConfig = SpeechEndDetectionConfig & {
+  mode: "manual" | "auto";
+};
+
 type ActiveCommand = {
   timezone: string;
   transcriber: TranscriptionStream;
   finalTranscriptChunks: string[];
   startedAt: number;
+  speechEndDetection: NormalizedSpeechEndDetectionConfig;
+  completionRequested: boolean;
+  acceptingAudio: boolean;
+  speechEndHintDispatched: boolean;
 };
 
 const FIVE_MINUTES_IN_MS = 5 * 60 * 1000;
+const DEFAULT_SPEECH_END_DETECTION: NormalizedSpeechEndDetectionConfig = {
+  mode: "manual",
+};
+type TtsState = {
+  streaming: boolean;
+  interrupted: boolean;
+  endSent: boolean;
+};
 
 export class VoiceSession {
   private transcriptionProvider: TranscriptionProvider;
@@ -35,6 +61,11 @@ export class VoiceSession {
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private lastActivity = Date.now();
   private activeCommand: ActiveCommand | null = null;
+  private ttsState: TtsState = {
+    streaming: false,
+    interrupted: false,
+    endSent: false,
+  };
 
   constructor(private options: VoiceSessionOptions) {
     this.transcriptionProvider = options.transcriptionProvider;
@@ -88,7 +119,7 @@ export class VoiceSession {
         await this.startCommand(payload);
         break;
       case "end":
-        await this.completeCommand();
+        await this.completeCommand("manual");
         break;
       case "cancel":
         this.cancelCommand();
@@ -113,12 +144,18 @@ export class VoiceSession {
     }
 
     try {
+      const speechEndDetection = this.normalizeSpeechEndDetection(
+        payload.speechEndDetection
+      );
       const transcriber = await this.transcriptionProvider.createStream({
         encoding: payload.audio?.encoding,
         sampleRate: payload.audio?.sampleRate,
         channels: payload.audio?.channels,
+        speechEndDetection,
         onTranscript: (event) => this.handleTranscript(event),
         onError: (error) => this.handleTranscriptionError(error),
+        onSpeechEnd: (hint) => this.handleSpeechEndHint(hint),
+        onSpeechStart: (hint) => this.handleSpeechStartHint(hint),
       });
 
       this.activeCommand = {
@@ -126,6 +163,10 @@ export class VoiceSession {
         transcriber,
         finalTranscriptChunks: [],
         startedAt: Date.now(),
+        speechEndDetection,
+        completionRequested: false,
+        acceptingAudio: true,
+        speechEndHintDispatched: false,
       };
 
       this.options.sendJson({ type: "command-started" });
@@ -138,11 +179,18 @@ export class VoiceSession {
     }
   }
 
-  private async completeCommand() {
+  private async completeCommand(trigger: "manual" | "auto" = "manual") {
     if (!this.activeCommand) {
       this.sendError("No active command");
       return;
     }
+
+    if (this.activeCommand.completionRequested) {
+      return;
+    }
+
+    this.activeCommand.completionRequested = true;
+    this.activeCommand.acceptingAudio = false;
 
     try {
       await this.activeCommand.transcriber.finish();
@@ -162,13 +210,14 @@ export class VoiceSession {
     if (!this.activeCommand) {
       return;
     }
+    this.activeCommand.acceptingAudio = false;
     this.activeCommand.transcriber.abort("command cancelled");
     this.activeCommand = null;
     this.options.sendJson({ type: "command-cancelled" });
   }
 
   private async forwardAudioChunk(buffer: ArrayBuffer) {
-    if (!this.activeCommand) {
+    if (!this.activeCommand || !this.activeCommand.acceptingAudio) {
       return;
     }
 
@@ -233,17 +282,23 @@ export class VoiceSession {
       },
     });
 
+    this.ttsState = { streaming: true, interrupted: false, endSent: false };
     let handled = false;
     try {
       await this.speechProvider.stream(text, {
-        onAudioChunk: (chunk) => this.options.sendBinary(chunk),
+        onAudioChunk: (chunk) => {
+          if (this.ttsState.endSent) {
+            return;
+          }
+          this.options.sendBinary(chunk);
+        },
         onClose: () => {
-          this.options.sendJson({ type: "tts.end" });
+          this.endTtsStream();
         },
         onError: (error) => {
           handled = true;
           this.sendError(error.message);
-          this.options.sendJson({ type: "tts.end", data: { errored: true } });
+          this.endTtsStream({ errored: true });
         },
       });
     } catch (error) {
@@ -251,8 +306,10 @@ export class VoiceSession {
         const message =
           error instanceof Error ? error.message : "Failed to stream TTS audio";
         this.sendError(message);
-        this.options.sendJson({ type: "tts.end", data: { errored: true } });
+        this.endTtsStream({ errored: true });
       }
+    } finally {
+      this.ttsState = { streaming: false, interrupted: false, endSent: false };
     }
   }
 
@@ -310,12 +367,31 @@ export class VoiceSession {
     this.teardownActiveCommand("transcriber error");
   }
 
+  private handleSpeechStartHint(hint?: SpeechStartHint) {
+    this.options.sendJson({
+      type: "speech-start.hint",
+      data: hint
+        ? {
+            reason: hint.reason,
+            timestampMs: hint.timestampMs,
+          }
+        : undefined,
+    });
+
+    if (this.ttsState.streaming && !this.ttsState.endSent) {
+      this.ttsState.interrupted = true;
+      this.endTtsStream({ interrupted: true });
+      this.ttsState.streaming = false;
+    }
+  }
+
   private teardownActiveCommand(reason: string) {
     if (!this.activeCommand) {
       return;
     }
 
     try {
+      this.activeCommand.acceptingAudio = false;
       this.activeCommand.transcriber.abort(reason);
     } catch {
       console.error("Failed to abort transcription stream", reason);
@@ -329,6 +405,26 @@ export class VoiceSession {
     this.options.sendJson({
       type: "error",
       data: { error: message },
+    });
+  }
+
+  private endTtsStream(extra?: { errored?: boolean; interrupted?: boolean }) {
+    if (!this.ttsState.streaming || this.ttsState.endSent) {
+      return;
+    }
+    const data: Record<string, unknown> = {};
+    if (extra?.errored) {
+      data.errored = true;
+    }
+    if (extra?.interrupted) {
+      data.interrupted = true;
+    } else if (this.ttsState.interrupted) {
+      data.interrupted = true;
+    }
+    this.ttsState.endSent = true;
+    this.options.sendJson({
+      type: "tts.end",
+      data: Object.keys(data).length > 0 ? data : undefined,
     });
   }
 
@@ -366,5 +462,46 @@ export class VoiceSession {
       clearTimeout(this.inactivityTimer);
       this.inactivityTimer = null;
     }
+  }
+
+  private normalizeSpeechEndDetection(
+    config?: SpeechEndDetectionConfig
+  ): NormalizedSpeechEndDetectionConfig {
+    if (!config) {
+      return { ...DEFAULT_SPEECH_END_DETECTION };
+    }
+    const mode = config.mode === "auto" ? "auto" : "manual";
+    return { ...config, mode };
+  }
+
+  private handleSpeechEndHint(hint?: SpeechEndHint) {
+    if (!this.activeCommand) {
+      return;
+    }
+
+    if (this.activeCommand.speechEndDetection.mode !== "auto") {
+      return;
+    }
+
+    if (this.activeCommand.speechEndHintDispatched) {
+      return;
+    }
+
+    this.activeCommand.speechEndHintDispatched = true;
+    this.activeCommand.acceptingAudio = false;
+
+    this.options.sendJson({
+      type: "speech-end.hint",
+      data: {
+        reason: hint?.reason,
+        confidence: hint?.confidence,
+      },
+    });
+
+    this.completeCommand("auto").catch((error) => {
+      const message =
+        error instanceof Error ? error.message : "Failed to auto-complete";
+      this.sendError(message);
+    });
   }
 }

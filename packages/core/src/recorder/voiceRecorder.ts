@@ -8,6 +8,7 @@ export class VoiceRecorder {
   private visualizationStream: MediaStream | null = null;
   private isRecording = false;
   private cancelling = false;
+  private skipNextEndEvent = false;
 
   constructor(private options: RecorderOptions) {}
 
@@ -47,6 +48,12 @@ export class VoiceRecorder {
     await this.options.sendJson({
       type: "start",
       timezone,
+      audio: {
+        encoding: "opus",
+        sampleRate: 48_000,
+        channels: 1,
+      },
+      speechEndDetection: this.options.speechEndDetection,
     });
 
     this.mediaRecorder = new MediaRecorder(this.mediaStream, {
@@ -61,6 +68,9 @@ export class VoiceRecorder {
     };
 
     this.mediaRecorder.onstop = async () => {
+      const suppressEndEvent = this.skipNextEndEvent;
+      this.skipNextEndEvent = false;
+
       this.mediaStream?.getTracks().forEach((track) => track.stop());
       this.mediaStream = null;
       this.visualizationStream = null;
@@ -71,7 +81,9 @@ export class VoiceRecorder {
         return;
       }
 
-      await this.options.sendJson({ type: "end" });
+      if (!suppressEndEvent) {
+        await this.options.sendJson({ type: "end" });
+      }
       await this.options.onRecordingEnded();
     };
 
@@ -83,6 +95,14 @@ export class VoiceRecorder {
     if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
       this.mediaRecorder.stop();
     }
+  }
+
+  stopFromServerHint() {
+    if (!this.mediaRecorder || this.mediaRecorder.state !== "recording") {
+      return;
+    }
+    this.skipNextEndEvent = true;
+    this.mediaRecorder.stop();
   }
 
   async cancel() {

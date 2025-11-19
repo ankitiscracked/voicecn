@@ -1,3 +1,17 @@
+export type SpeechEndDetectionMode = "manual" | "auto";
+
+export interface SpeechEndDetectionConfig {
+  mode?: SpeechEndDetectionMode;
+  provider?: string;
+  options?: Record<string, unknown>;
+}
+
+export interface SpeechStartHint {
+  timestampMs?: number;
+  reason?: string;
+  providerPayload?: unknown;
+}
+
 export type VoiceCommandStage =
   | "idle"
   | "recording"
@@ -35,6 +49,8 @@ export type VoiceSocketEvent =
   | { type: "error"; data?: { error?: string } }
   | { type: "closed"; data?: { code?: number; reason?: string } }
   | { type: "pong"; data?: { timestamp?: number } }
+  | { type: "speech-end.hint"; data?: { reason?: string; confidence?: number } }
+  | { type: "speech-start.hint"; data?: { reason?: string; timestampMs?: number } }
   | { type: string; data?: any };
 
 export interface VoiceSocketClientOptions {
@@ -74,6 +90,10 @@ export interface RecorderOptions extends RecorderHooks {
    * Optional MediaDevices reference (used for SSR-friendly unit tests).
    */
   mediaDevices?: MediaDevices;
+  /**
+   * Configure how the recorder should treat speech end events.
+   */
+  speechEndDetection?: SpeechEndDetectionConfig;
   /**
    * Recorder chunk duration in ms.
    */

@@ -143,4 +143,28 @@ describe("VoiceRecorderController", () => {
     await Promise.resolve();
     expect(sendJson).toHaveBeenCalledWith({ type: "end" });
   });
+
+  it("suppresses end event when stopped via server hint", async () => {
+    const sendJson = vi.fn();
+    const onRecordingEnded = vi.fn();
+    const controller = new VoiceRecorder({
+      mediaDevices: {
+        getUserMedia: vi.fn(async () => new FakeMediaStream()),
+      } as unknown as MediaDevices,
+      sendBinary: vi.fn(),
+      sendJson,
+      onSocketReady: vi.fn(),
+      onRecordingEnded,
+      onCancel: vi.fn(),
+    });
+
+    await controller.start();
+    controller.stopFromServerHint();
+    await Promise.resolve();
+
+    const eventTypes = sendJson.mock.calls.map((call) => call[0].type);
+    expect(eventTypes).toContain("start");
+    expect(eventTypes).not.toContain("end");
+    expect(onRecordingEnded).toHaveBeenCalledTimes(1);
+  });
 });

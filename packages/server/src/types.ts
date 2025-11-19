@@ -1,4 +1,10 @@
-import type { VoiceSocketEvent } from "@usevoiceai/core";
+import type {
+  SpeechEndDetectionConfig,
+  SpeechStartHint,
+  VoiceSocketEvent,
+} from "@usevoiceai/core";
+
+export type { SpeechEndDetectionConfig, SpeechStartHint } from "@usevoiceai/core";
 
 export interface Env {
   [key: string]: any;
@@ -16,6 +22,12 @@ export interface TranscriptionStream {
   abort: (reason?: string) => void;
 }
 
+export interface SpeechEndHint {
+  reason?: string;
+  confidence?: number;
+  providerPayload?: unknown;
+}
+
 export interface TranscriptionProvider {
   createStream: (options: {
     encoding?: string;
@@ -24,6 +36,9 @@ export interface TranscriptionProvider {
     onTranscript: (event: { transcript: string; isFinal: boolean }) => void;
     onError: (error: Error) => void;
     onClose?: () => void;
+    onSpeechEnd?: (hint?: SpeechEndHint) => void;
+    onSpeechStart?: (hint?: SpeechStartHint) => void;
+    speechEndDetection?: SpeechEndDetectionConfig;
   }) => Promise<TranscriptionStream>;
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { VoiceInputController } from "./voiceInputController";
 import { VoiceSocketClient } from "../socket/voiceSocketClient";
 import { VoiceInputStore } from "../state/voiceInputStore";
+import { VoiceRecorder } from "../recorder/voiceRecorder";
 
 class MockSocket implements Partial<VoiceSocketClient> {
   listeners = new Set<(event: any) => void>();
@@ -95,5 +96,132 @@ describe("VoiceInputController", () => {
     expect(store.getStatus().transcript).toBe("hello world");
 
     controller.destroy();
+  });
+
+  it("auto-stops recording when speech end hints arrive", () => {
+    const socket = new MockSocket();
+    const store = new VoiceInputStore();
+    const stopSpy = vi.spyOn(
+      VoiceRecorder.prototype,
+      "stopFromServerHint"
+    );
+    const controller = new VoiceInputController({
+      socket: socket as unknown as VoiceSocketClient,
+      store,
+      speechEndDetection: { mode: "auto" },
+    });
+
+    socket.emit({ type: "speech-end.hint" });
+
+    expect(store.getStatus().stage).toBe("processing");
+    expect(stopSpy).toHaveBeenCalled();
+
+    stopSpy.mockRestore();
+    controller.destroy();
+  });
+
+  it("stops tts playback when receiving speech start hints", () => {
+    const socket = new MockSocket();
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
+      socket: socket as unknown as VoiceSocketClient,
+      store,
+      speechEndDetection: { mode: "auto" },
+    });
+
+    socket.emit({
+      type: "tts.start",
+      data: { sampleRate: 48_000, encoding: "linear16", channels: 1 },
+    });
+    expect(store.isAudioPlaying()).toBe(true);
+
+    socket.emit({ type: "speech-start.hint" });
+
+    expect(store.isAudioPlaying()).toBe(false);
+    expect(store.getAudioStream()).toBeNull();
+
+    controller.destroy();
+  });
+
+  it("auto restarts recording after clean tts playback ends in auto mode", async () => {
+    const startSpy = vi
+      .spyOn(VoiceRecorder.prototype, "start")
+      .mockImplementation(async function () {
+        (this as any).isRecording = true;
+      });
+    const stopHintSpy = vi
+      .spyOn(VoiceRecorder.prototype, "stopFromServerHint")
+      .mockImplementation(function () {
+        (this as any).isRecording = false;
+      });
+
+    const socket = new MockSocket();
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
+      socket: socket as unknown as VoiceSocketClient,
+      store,
+      speechEndDetection: { mode: "auto" },
+    });
+
+    await controller.startRecording();
+    startSpy.mockClear();
+
+    socket.emit({ type: "speech-end.hint" });
+    socket.emit({
+      type: "tts.start",
+      data: { sampleRate: 48_000, encoding: "linear16", channels: 1 },
+    });
+    const stream = store.getAudioStream();
+    expect(stream).toBeTruthy();
+
+    socket.emit({ type: "tts.end" });
+
+    stream?.release();
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(startSpy).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+    startSpy.mockRestore();
+    stopHintSpy.mockRestore();
+  });
+
+  it("restarts recording immediately when speech start hint arrives", async () => {
+    const startSpy = vi
+      .spyOn(VoiceRecorder.prototype, "start")
+      .mockImplementation(async function () {
+        (this as any).isRecording = true;
+      });
+    const stopHintSpy = vi
+      .spyOn(VoiceRecorder.prototype, "stopFromServerHint")
+      .mockImplementation(function () {
+        (this as any).isRecording = false;
+      });
+
+    const socket = new MockSocket();
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
+      socket: socket as unknown as VoiceSocketClient,
+      store,
+      speechEndDetection: { mode: "auto" },
+    });
+
+    await controller.startRecording();
+    startSpy.mockClear();
+
+    socket.emit({ type: "speech-end.hint" });
+    socket.emit({
+      type: "tts.start",
+      data: { sampleRate: 48_000, encoding: "linear16", channels: 1 },
+    });
+
+    socket.emit({ type: "speech-start.hint" });
+
+    expect(startSpy).toHaveBeenCalledTimes(1);
+
+    controller.destroy();
+    startSpy.mockRestore();
+    stopHintSpy.mockRestore();
   });
 });

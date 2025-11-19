@@ -3,6 +3,7 @@ import {
   VoiceInputResult,
   VoiceInputStore,
   VoiceSocketClient,
+  type SpeechEndDetectionConfig,
   type VoiceSocketClientOptions,
 } from "@usevoiceai/core";
 
@@ -15,6 +16,7 @@ interface VoiceCommandBridgeOptions {
     success?: (message: string) => void;
     error?: (message: string) => void;
   };
+  speechEndDetection?: SpeechEndDetectionConfig;
 }
 
 interface VoiceCommandBridge {
@@ -38,6 +40,7 @@ export function createVoiceInputBridge(
     store,
     notifications: options.notifications,
     mediaDevices: options.mediaDevices,
+    speechEndDetection: options.speechEndDetection,
   });
 
   return {

@@ -9,6 +9,8 @@ const DeepgramEvents = {
   Transcript: LiveTranscriptionEvents.Transcript,
   Close: LiveTranscriptionEvents.Close,
   Error: LiveTranscriptionEvents.Error,
+  SpeechStarted: LiveTranscriptionEvents.SpeechStarted,
+  UtteranceEnd: LiveTranscriptionEvents.UtteranceEnd,
 } as const;
 
 type DeepgramLiveStream = {
@@ -70,19 +72,66 @@ export class DeepgramTranscriptionProvider implements TranscriptionProvider {
     onTranscript,
     onError,
     onClose,
+    onSpeechEnd,
+    onSpeechStart,
+    speechEndDetection,
   }: Parameters<
     TranscriptionProvider["createStream"]
   >[0]): Promise<TranscriptionStream> {
     const client = this.clientFactory();
-    const stream = client.listen.live({
+    const detectionOptions = (speechEndDetection?.options ??
+      {}) as Record<string, unknown>;
+
+    const coerceMs = (value: unknown) => {
+      if (typeof value === "number") {
+        return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+      }
+      if (typeof value === "string") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0
+          ? Math.round(parsed)
+          : null;
+      }
+      return null;
+    };
+
+    const utteranceEndMs =
+      coerceMs(
+        detectionOptions.utteranceEndMs ??
+          detectionOptions.utterance_end_ms ??
+          detectionOptions.gapMs ??
+          detectionOptions.silenceMs
+      ) ?? 1200;
+    const endpointingMs = coerceMs(
+      detectionOptions.endpointing ??
+        detectionOptions.endpointingMs ??
+        detectionOptions.endpointing_ms
+    );
+    const vadEventsEnabled =
+      typeof detectionOptions.vadEvents === "boolean"
+        ? detectionOptions.vadEvents
+        : typeof detectionOptions.vad_events === "boolean"
+          ? (detectionOptions.vad_events as boolean)
+          : true;
+
+    const streamOptions: Record<string, unknown> = {
       model: this.modelId,
       punctuate: true,
       interim_results: true,
-      utterance_end_ms: 1500,
       encoding: this.defaultEncoding,
       sampleRate: this.defaultSampleRate,
       channels: this.defaultChannels,
-    });
+    };
+
+    if (speechEndDetection?.mode === "auto") {
+      streamOptions.utterance_end_ms = String(utteranceEndMs);
+      streamOptions.vad_events = vadEventsEnabled;
+      if (endpointingMs) {
+        streamOptions.endpointing = endpointingMs;
+      }
+    }
+
+    const stream = client.listen.live(streamOptions);
 
     let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
     let isOpen = false;
@@ -95,6 +144,8 @@ export class DeepgramTranscriptionProvider implements TranscriptionProvider {
       finishResolve = resolve;
       finishReject = reject;
     });
+    const autoStopEnabled = speechEndDetection?.mode === "auto";
+    let speechEndHinted = false;
 
     const settleFinish = (error?: Error) => {
       if (finishSettled) {
@@ -152,6 +203,42 @@ export class DeepgramTranscriptionProvider implements TranscriptionProvider {
       onTranscript({
         transcript,
         isFinal: Boolean(data?.is_final),
+      });
+      if (
+        autoStopEnabled &&
+        !speechEndHinted &&
+        (data?.speech_final === true || data?.is_final === true)
+      ) {
+        speechEndHinted = true;
+        onSpeechEnd?.({
+          reason: data?.speech_final ? "speech_final" : "is_final",
+          providerPayload: data,
+        });
+      }
+    });
+
+    stream.on(DeepgramEvents.UtteranceEnd, (data: any) => {
+      if (!autoStopEnabled || speechEndHinted) {
+        return;
+      }
+      speechEndHinted = true;
+      onSpeechEnd?.({
+        reason: "utterance_end",
+        providerPayload: data,
+      });
+    });
+
+    stream.on(DeepgramEvents.SpeechStarted, (data: any) => {
+      if (!autoStopEnabled) {
+        return;
+      }
+      onSpeechStart?.({
+        reason: "speech_started",
+        providerPayload: data,
+        timestampMs:
+          typeof data?.timestamp === "number"
+            ? Math.round(data.timestamp * 1000)
+            : undefined,
       });
     });
 

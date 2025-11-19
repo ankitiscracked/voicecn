@@ -1,4 +1,6 @@
 import type {
+  SpeechEndHint,
+  SpeechStartHint,
   TranscriptionProvider,
   TranscriptionStream
 } from "../../types";
@@ -10,13 +12,20 @@ export interface MockTranscriptionProviderOptions {
 export class MockTranscriptionProvider
   implements TranscriptionProvider
 {
+  private lastSpeechEndCallback: ((hint?: SpeechEndHint) => void) | null = null;
+  private lastSpeechStartCallback: ((hint?: SpeechStartHint) => void) | null = null;
+
   constructor(private options: MockTranscriptionProviderOptions = {}) {}
 
   async createStream({
-    onTranscript
+    onTranscript,
+    onSpeechEnd,
+    onSpeechStart
   }: Parameters<TranscriptionProvider["createStream"]>[0]): Promise<TranscriptionStream> {
     let aborted = false;
     let buffer: ArrayBuffer[] = [];
+    this.lastSpeechEndCallback = onSpeechEnd ?? null;
+    this.lastSpeechStartCallback = onSpeechStart ?? null;
 
     return {
       send: (chunk) => {
@@ -50,5 +59,13 @@ export class MockTranscriptionProvider
         buffer = [];
       }
     };
+  }
+
+  triggerSpeechEnd(hint?: SpeechEndHint) {
+    this.lastSpeechEndCallback?.(hint);
+  }
+
+  triggerSpeechStart(hint?: SpeechStartHint) {
+    this.lastSpeechStartCallback?.(hint);
   }
 }
