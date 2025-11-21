@@ -5,7 +5,7 @@
     <p>Live transcript: {{ command.status.realtimeText ?? "—" }}</p>
     <p>Final transcript: {{ command.status.transcript ?? "—" }}</p>
     <button @click="toggle">
-      {{ command.status.stage === "recording" ? "Stop" : "Start Demo Recording" }}
+      {{ command.isRecording ? "Stop" : "Start Demo Recording" }}
     </button>
     <section>
       <h2>Results</h2>
@@ -26,7 +26,7 @@ const command = useVoiceCommand({
 });
 
 const toggle = async () => {
-  if (command.status.value.stage === "recording") {
+  if (command.isRecording.value) {
     command.stopRecording();
     return;
   }

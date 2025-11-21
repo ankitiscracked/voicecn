@@ -29,16 +29,29 @@ describe("@usevoiceai/vue useVoiceCommand", () => {
           socket: socket as any
         });
         return () =>
-          h("div", { "data-stage": command.status.value.stage }, "");
+          h(
+            "div",
+            {
+              "data-stage": command.status.value.stage,
+              "data-recording": command.isRecording.value ? "true" : "false"
+            },
+            ""
+          );
       }
     });
 
     const wrapper = mount(TestComponent);
     expect(wrapper.attributes("data-stage")).toBe("idle");
+    expect(wrapper.attributes("data-recording")).toBe("false");
 
     store.setStatus({ stage: "recording" });
     await wrapper.vm.$nextTick();
 
     expect(wrapper.attributes("data-stage")).toBe("recording");
+
+    store.setRecording(true);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.attributes("data-recording")).toBe("true");
   });
 });

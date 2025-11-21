@@ -38,6 +38,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
   );
   const audioStream = shallowRef(store.getAudioStream());
   const isAudioPlaying = shallowRef(store.isAudioPlaying());
+  const isRecording = shallowRef(store.isRecording());
 
   const unsubStatus = store.subscribe((next) => {
     status.value = next;
@@ -51,6 +52,9 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
   const unsubPlayback = store.subscribePlayback((playing) => {
     isAudioPlaying.value = playing;
   });
+  const unsubRecording = store.subscribeRecording((recording) => {
+    isRecording.value = recording;
+  });
 
   const unsubQuery = bridge.subscribeQueryResponse((result) => {
     queryResponse.value = result;
@@ -61,6 +65,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
     unsubResults();
     unsubAudio();
     unsubPlayback();
+    unsubRecording();
     unsubQuery();
     bridge.destroy();
   });
@@ -75,6 +80,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
     queryResponse: readonly(queryResponse),
     audioStream: readonly(audioStream),
     isAudioPlaying: readonly(isAudioPlaying),
+    isRecording: readonly(isRecording),
     startRecording,
     stopRecording,
     cancelRecording,

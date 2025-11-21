@@ -45,6 +45,7 @@ export function VoiceDemo({
     results,
     audioStream,
     isAudioPlaying,
+    isRecording,
   } = useVoice({
     socketOptions,
     speechEndDetection,
@@ -52,7 +53,6 @@ export function VoiceDemo({
 
   useAudio({ audioStream });
 
-  const isRecording = status.stage === "recording";
   const isProcessing = status.stage === "processing";
   const isError = status.stage === "error";
   const isPlaying = isAudioPlaying;
@@ -68,7 +68,7 @@ export function VoiceDemo({
       return;
     }
 
-    if (status.stage === "recording") {
+    if (isRecording) {
       stopRecording();
       return;
     }
@@ -103,7 +103,7 @@ export function VoiceDemo({
       <div className="p-6 w-full max-w-3xl mx-auto border border-stone-200 rounded-xl bg-white shadow-sm">
         <div className="space-y-6">
           <div className="bg-stone-50 rounded-lg p-8 min-h-[220px] flex items-center justify-center border border-stone-100">
-            {isRecording && (
+            {isRecording && !isProcessing && !isPlaying && (
               <div className="flex items-center flex-col gap-8">
                 <div className="relative">
                   <div className="w-20 h-20 bg-red-400 rounded-full animate-pulse"></div>
@@ -117,7 +117,7 @@ export function VoiceDemo({
               </div>
             )}
 
-            {isProcessing && !isRecording && (
+            {isProcessing && (
               <div className="flex items-center gap-2">
                 {[0, 150, 300, 450, 600].map((delay) => (
                   <div
@@ -129,7 +129,7 @@ export function VoiceDemo({
               </div>
             )}
 
-            {isPlaying && !isRecording && !isProcessing && (
+            {isPlaying && (
               <div className="flex items-end justify-center gap-1.5 h-20">
                 {[20, 40, 60, 40, 20].map((height, index) => (
                   <div
@@ -141,7 +141,7 @@ export function VoiceDemo({
               </div>
             )}
 
-            {!isRecording && !isProcessing && !isPlaying && (
+            {!isRecording && (
               <div className="text-stone-500 text-lg font-semibold">
                 Tap record to start
               </div>

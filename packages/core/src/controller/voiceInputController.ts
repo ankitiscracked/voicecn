@@ -77,9 +77,11 @@ export class VoiceInputController {
 
   async startRecording() {
     this.enterRecordingStage();
+    this.store.setRecording(true);
     try {
       await this.recorder.start();
     } catch (error) {
+      this.store.setRecording(false);
       this.store.setStatus({
         stage: "error",
         error: error instanceof Error ? error.message : "Unknown error",
@@ -101,6 +103,7 @@ export class VoiceInputController {
     this.unsubSocket = null;
     this.closeAudioStream();
     this.store.resetButKeepResults();
+    this.store.setRecording(false);
   }
 
   private async handleSocketReady() {
@@ -111,6 +114,7 @@ export class VoiceInputController {
   }
 
   private async handleRecordingEnded() {
+    this.store.setRecording(false);
     this.store.updateStage("processing");
   }
 
@@ -119,6 +123,7 @@ export class VoiceInputController {
     this.closeAudioStream();
     this.store.setAudioPlayback(false);
     this.store.setStatus({ transcript: undefined });
+    this.store.setRecording(false);
   }
 
   private async handleSocketEvent(event: VoiceSocketEvent | ArrayBuffer) {
@@ -279,13 +284,15 @@ export class VoiceInputController {
     const text = typeof transcript === "string" ? transcript : "";
     const trimmed = text.trim();
     if (trimmed.length > 0) {
+      const status = this.store.getStatus();
       if (this.store.isAudioPlaying()) {
         this.closeAudioStream(new Error("tts interrupted by transcript"));
         this.store.setAudioPlayback(false);
       }
       if (
         this.speechEndDetection.mode === "auto" &&
-        this.store.getStatus().stage !== "recording"
+        status.stage !== "recording" &&
+        status.stage !== "processing"
       ) {
         this.enterRecordingStage();
       }

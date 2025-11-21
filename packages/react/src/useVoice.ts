@@ -27,6 +27,7 @@ export interface UseVoiceCommandResult {
   results: VoiceInputResult[];
   audioStream: VoiceAudioStream | null;
   isAudioPlaying: boolean;
+  isRecording: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   cancelRecording: () => Promise<void>;
@@ -77,6 +78,10 @@ export function useVoice(
     (callback) => store.subscribePlayback(callback),
     () => store.isAudioPlaying()
   );
+  const isRecording = useSyncExternalStore(
+    (callback) => store.subscribeRecording(callback),
+    () => store.isRecording()
+  );
 
   useEffect(() => {
     bridge.init();
@@ -100,6 +105,7 @@ export function useVoice(
     results,
     audioStream,
     isAudioPlaying,
+    isRecording,
     startRecording,
     stopRecording,
     cancelRecording,

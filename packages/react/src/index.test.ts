@@ -53,4 +53,21 @@ describe("@usevoiceai/react useVoiceCommand", () => {
 
     expect(result.current.status.transcript).toBe("streaming");
   });
+
+  it("exposes live recording state", async () => {
+    const store = new VoiceInputStore();
+    const socket = new MockSocket();
+
+    const { result } = renderHook(() =>
+      useVoice({ state: store, socket: socket as any })
+    );
+
+    expect(result.current.isRecording).toBe(false);
+
+    await act(async () => {
+      store.setRecording(true);
+    });
+
+    expect(result.current.isRecording).toBe(true);
+  });
 });

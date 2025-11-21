@@ -169,4 +169,28 @@ describe("VoiceInputController", () => {
     controller.destroy();
   });
 
+  it("does not leave processing stage when late partials arrive in auto mode", () => {
+    const socket = new MockSocket();
+    const store = new VoiceInputStore();
+    const controller = new VoiceInputController({
+      socket: socket as unknown as VoiceSocketClient,
+      store,
+      speechEndDetection: { mode: "auto" },
+    });
+
+    // Simulate speech end hint transitioning to processing
+    socket.emit({ type: "speech-end.hint" });
+    expect(store.getStatus().stage).toBe("processing");
+
+    socket.emit({
+      type: "transcript.partial",
+      data: { transcript: "late packet" },
+    });
+
+    expect(store.getStatus().stage).toBe("processing");
+    expect(store.getStatus().transcript).toBe("late packet");
+
+    controller.destroy();
+  });
+
 });
